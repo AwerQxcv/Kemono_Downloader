@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Kemono_Downloader",
   "description": "kemono.cr 게시글에서 우클릭하여 저장",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "default_locale": "en",
   "author": "AwerQxcv",
   "icons": {
