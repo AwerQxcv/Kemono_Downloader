@@ -291,3 +291,7 @@ label.main {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+[data-l10n-id] {
+    white-space: pre-line;
+}

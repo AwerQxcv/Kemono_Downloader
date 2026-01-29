@@ -147,7 +147,7 @@ function collectContent(type) {
     acc.push({
       index: validIndex++,
       url: urlPart,
-      name: finalNameOnly,
+      name: sanitizeText(finalNameOnly, false),
       extension: extension
     });
 

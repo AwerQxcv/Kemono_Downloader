@@ -226,6 +226,9 @@ document.querySelectorAll('input[type="text"]').forEach(input => {
       toggleWarning(input.id, true);
 
       // "Bad" visual effects.
+      const originalBg = input.style.backgroundColor;
+      const originalShadow = input.style.boxShadow;
+
       input.style.transition = 'background-color 0.4s ease, box-shadow 0.4s ease';
       input.style.backgroundColor = '#f8d7da';
       input.style.boxShadow = 'inset 0 0 0 1px #dc3545';
@@ -242,8 +245,8 @@ document.querySelectorAll('input[type="text"]').forEach(input => {
       }, 10);
 
       setTimeout(() => {
-        input.style.backgroundColor = '';
-        input.style.outline = '';
+        input.style.backgroundColor = originalBg;
+        input.style.boxShadow = originalShadow;
       }, 1000);
 
       return;
@@ -257,7 +260,6 @@ document.querySelectorAll('input[type="text"]').forEach(input => {
       const originalShadow = input.style.boxShadow;
 
       input.style.transition = 'background-color 0.4s ease, box-shadow 0.4s ease';
-
       input.style.backgroundColor = '#d4edda';
       input.style.boxShadow = 'inset 0 0 0 1px #28a745';
 
