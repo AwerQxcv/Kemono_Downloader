@@ -16,6 +16,26 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
   });
 });
 
+
+// 단축키 추가
+browser.commands.onCommand.addListener((command) => {
+    if (command === "download") {
+    browser.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      browser.tabs.sendMessage(tabs[0].id, { message: "getImage" });
+    });
+  }
+});
+
+// 업데이트 / 설치 시 표시되는 팝업 창
+browser.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'update' || details.reason === 'install') {
+    details.previousVersion
+    
+    // 방법 A: 새 탭 열기
+    browser.tabs.create({ url: 'update-notes.html?prev=${details.previousVersion}' });
+  }
+});
+
 //直リンに出来ない物は一度storageに投げた方がよさそう
 chrome.runtime.onMessage.addListener(function (request) {
   if (request.type == "download") {
