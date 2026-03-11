@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-l11n-id="update_notes_title">업데이트 노트</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="update-notes.css">
+    <script src="update-notes.js" defer></script>
+
+</head>
+
+<body>
+    <div class="wrap">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="logo-wrap">
+                    <img class="logo-image" src="icon_48.png">
+                    <div class="logo-font">KEMONO<br>DOWNLOADER</div>
+                </div>
+                <div class="eyebrow" data-l11n-id="update_notes_description">애드온 업데이트</div>
+                <h1 data-l11n-id="update_notes_what_changed">무엇이 바뀌었나요</h1>
+                <div class="version-badge">
+                    <div data-l11n-id="update_notes_previous_version">이전 버전</div> <span id="prev-version">-</span> →
+                    <div data-l11n-id="update_notes_current_version">현재 버전</div> <span id="cur-version">-</span>
+                </div>
+            </div>
+            <button class="close-btn" id="closeBtn" title="닫기">✕</button>
+        </div>
+
+        <!-- New features -->
+        <div class="section">
+            <div class="section-title" data-l11n-id="update_notes_changes">변경사항</div>
+            <ul class="changes">
+
+                <li class="change-item">
+                    <span class="tag new">New</span>
+                    <div class="change-text">
+                        <p data-l11n-id="update_notes_new_title">새로운 기능 제목</p>
+                        <span class="sub" data-l11n-id="update_notes_new_desc">간단한 부연 설명이 들어가는 자리입니다.</span>
+                    </div>
+                </li>
+
+                <li class="change-item">
+                    <span class="tag imp">Imp</span>
+                    <div class="change-text">
+                        <p data-l11n-id="update_notes_imp_title">개선된 기능 제목</p>
+                        <span class="sub" data-l11n-id="update_notes_imp_desc">어떤 점이 달라졌는지 한 줄로 설명합니다.</span>
+                    </div>
+                </li>
+
+                <!-- <li class="change-item">
+                    <span class="tag fix">Fix</span>
+                    <div class="change-text">
+                        수정된 버그 제목
+                        <span class="sub">재현 조건이나 영향 범위를 간략히 적습니다.</span>
+                    </div>
+                </li> -->
+
+            </ul>
+        </div>
+
+        <!-- Footer links -->
+        <div class="footer-links">
+            <a href="https://github.com/AwerQxcv/Kemono_Downloader/issues" class="footer-link"
+                data-l11n-id="update_notes_bug_report">🐛 버그 제보</a>
+            <div class="footer-link">E-Mail : awerqxcv@proton.me</div>
+        </div>
+
+    </div>
+</body>
+
+</html>
