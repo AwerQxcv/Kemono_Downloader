@@ -4,6 +4,7 @@
   "manifest_download_options": { "message": "ダウンロードオプション" },
 
   "context_menu_save_page": { "message": "ページを保存", "description": "以下settings.html用" },
+  "open_update_notes": { "message": "アップデート内容の表示" },
   "options_download_text": { "message": "テキストをダウンロード" },
   "options_download_images": { "message": "画像をダウンロード" },
   "options_download_attachments": { "message": "添付ファイルをダウンロード" },
@@ -68,6 +69,6 @@
   "update_notes_new_desc": { "message": "ショートカットキーによるダウンロード機能が追加されました。デフォルトのショートカットキーは「Ctrl+Shift+F」です。" },
   "update_notes_imp": { "message": "改善された機能" },
   "update_notes_imp_title": { "message": "改善された機能" },
-  "update_notes_imp_desc": { "message": "今後のアップデートごとに、ポップアップウィンドウで変更内容を確認できるようになりました。" },
+  "update_notes_imp_desc": { "message": "今後のアップデートごとに、ポップアップウィンドウで変更内容を確認できるようになりました。\nまた、アップデート履歴を設定ページから確認できるようになりました。" },
   "update_notes_bug_report": { "message": "🐛 バグ報告" }
 }
