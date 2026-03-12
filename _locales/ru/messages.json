@@ -4,6 +4,7 @@
   "manifest_download_options": { "message": "Параметры загрузки" },
   
   "context_menu_save_page": { "message": "Сохранить страницу", "description": "Ниже для settings.html" },
+  "open_update_notes": { "message": "Открыть заметки обновления" },
   "options_download_text": { "message": "Скачивать текст" },
   "options_download_images": { "message": "Скачивать изображения" },
   "options_download_attachments": { "message": "Скачивать вложения" },
@@ -68,6 +69,6 @@
   "update_notes_new_desc": { "message": "Добавлена возможность скачивания с помощью сочетания клавиш. Сочетание клавиш по умолчанию: «Ctrl+Shift+F»." },
   "update_notes_imp": { "message": "Улучшено" },
   "update_notes_imp_title": { "message": "Улучшение" },
-  "update_notes_imp_desc": { "message": "Теперь при каждом обновлении будет появляться всплывающее окно с описанием изменений." },
+  "update_notes_imp_desc": { "message": "Теперь при каждом обновлении будет появляться всплывающее окно с описанием изменений.\nКроме того, вы можете просматривать историю обновлений на странице настроек." },
   "update_notes_bug_report": { "message": "🐛 Сообщить об ошибке" }
 }

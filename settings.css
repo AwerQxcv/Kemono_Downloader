@@ -133,6 +133,23 @@ h4 {
     background-color: #ffe6e6;
 }
 
+/* 업데이트 노트 링크 스타일 */
+.update-notes-link {
+  display: inline-block;
+  font-size: 14px;
+  color: #000;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.update-notes-link:hover {
+  color: #007bff;
+}
+
+.update-notes-link:visited {
+  color: #000;
+}
+
 /* 테이블 스타일 */
 .macrolist {
     width: 100%;

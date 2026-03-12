@@ -28,11 +28,11 @@ browser.commands.onCommand.addListener((command) => {
 
 // 업데이트 / 설치 시 표시되는 팝업 창
 browser.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'update' || details.reason === 'install') {
+  if (details.reason === 'update') {
     details.previousVersion
     
     // 방법 A: 새 탭 열기
-    browser.tabs.create({ url: 'update-notes.html?prev=${details.previousVersion}' });
+    browser.tabs.create({ url: `update-notes.html?prev=${details.previousVersion}` });
   }
 });
 
