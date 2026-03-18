@@ -66,9 +66,11 @@
   "update_notes_changes": { "message": "변경사항"},
   "update_notes_new": { "message": "새로운 기능"},
   "update_notes_new_title": { "message": "새로운 기능"},
-  "update_notes_new_desc": { "message": "단축키를 통한 다운로드 기능이 추가되었습니다. 기본 단축키는 'Ctrl+Shift+F' 입니다.\n"},
+  "update_notes_new_desc": { "message": "v1.2.3 : 단축키를 통한 다운로드 기능이 추가되었습니다. 기본 단축키는 'Ctrl+Shift+F' 입니다.\n"},
   "update_notes_imp": { "message": "개선된 기능"},
   "update_notes_imp_title": { "message": "개선된 기능"},
-  "update_notes_imp_desc": { "message": "앞으로 업데이트마다 팝업 창을 통한 업데이트 확인 기능으로 무엇이 변경됐는지 알기 쉽게끔 하였습니다.\n또한 업데이트 내역을 설정 페이지에서 열어볼 수 있게끔 설정하였습니다."},
+  "update_notes_imp_desc": { "message": "v1.2.4 : 앞으로 업데이트마다 팝업 창을 통한 업데이트 확인 기능으로 무엇이 변경됐는지 알기 쉽게끔 하였습니다.\n또한 업데이트 내역을 설정 페이지에서 열어볼 수 있게끔 설정하였습니다."},
+  "update_notes_fix_title": { "message": "수정된 버그"},
+  "update_notes_fix_desc": { "message": "v1.2.5 : 다운로드가 정상적으로 진행되지 않을 시 자동으로 재시도하는 기능을 추가하였습니다.\n해당 페이지를 벗어날 시, 혹은 kemono 서버 자체의 문제가 있을 경우 취소합니다."},
   "update_notes_bug_report": { "message": "🐛 버그 제보"}
 }

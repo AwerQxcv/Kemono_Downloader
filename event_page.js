@@ -9,7 +9,7 @@ chrome.contextMenus.create({
   ]
 });
 
-//選択時のイベント
+// 選択時のイベント
 chrome.contextMenus.onClicked.addListener(function (info, tab) {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     chrome.tabs.sendMessage(tabs[0].id, { message: "getImage" });
@@ -52,9 +52,45 @@ chrome.runtime.onMessage.addListener(function (request) {
 });
 
 function download(url, filename) {
-  chrome.downloads.download({
+  browser.downloads.download({
     url: url,
     filename: filename,
     saveAs: false,
   });
 }
+
+
+// 다운로드 실패 시 재시도 기능 구현
+const retryMap = new Map(); // 다운로드 ID별 재시도 횟수 관리
+
+chrome.downloads.onChanged.addListener((delta) => {
+  if (delta.error && delta.error.current) {
+    chrome.downloads.search({ id: delta.id }, ([item]) => {
+      if (!item) return;
+
+      const retryCount = retryMap.get(delta.id) ?? 0;
+
+      if (retryCount >= 1000) {
+        // 1000회 초과 시 포기
+        retryMap.delete(delta.id);
+        return;
+      }
+
+      retryMap.set(delta.id, retryCount + 1);
+
+      // 5초 후 재시도
+      setTimeout(() => {
+        if (item.canResume) {
+          chrome.downloads.resume(delta.id);
+        } else {
+          download(item.url, item.filename);
+        }
+      }, 5000);
+    });
+  }
+
+  // 완료되면 재시도 카운트 정리
+  if (delta.state?.current === 'complete') {
+    retryMap.delete(delta.id);
+  }
+});
