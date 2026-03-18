@@ -70,5 +70,7 @@
   "update_notes_imp": { "message": "Improved" },
   "update_notes_imp_title": { "message": "Improvement" },
   "update_notes_imp_desc": { "message": "From now on, each update will show a popup window summarizing what has changed.\nAdditionally, you can view update history from the settings page." },
+  "update_notes_fix_title": { "message": "Fixed Bugs"},
+  "update_notes_fix_desc": { "message": "v1.2.5 : If the download fails, a retry function has been added.\nIf you leave the page or there is an issue with the kemono server itself, the download will be canceled."},
   "update_notes_bug_report": { "message": "🐛 Report a Bug" }
 }
