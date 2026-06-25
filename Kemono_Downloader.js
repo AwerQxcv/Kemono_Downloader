@@ -68,9 +68,12 @@ function getDate(num) {
   try {
     src = document.querySelector(".timestamp").getAttribute("datetime");
     replaced = /(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)/.exec(src);
+    if (replaced == null) {
+      replaced = /(\d+)-(\d+)-(\d+)\s(\d+):(\d+):(\d+)/.exec(src);
+    }
     return replaced[num];
   } catch (error) {
-    replaced = [ "0", "0000", "00", "00", "00", "00", "00" ]
+    replaced = ["0", "0000", "00", "00", "00", "00", "00"]
     return replaced[num];
   }
 }
@@ -132,7 +135,7 @@ function collectContent(type) {
     // try - just for peace of mind in case of broken URLs
     try {
       rawFileName = decodeURIComponent(rawFileName).replace(/\+/g, ' '); // 알바벳 이외의 문자를 읽을 수 있게 변환하고 + 를 공백으로 변환
-    } catch (e) {} // 에러 시 아무것도 안 함
+    } catch (e) { } // 에러 시 아무것도 안 함
 
     //The same extension check and extraction, as for URL
     let finalNameOnly = rawFileName;
@@ -151,7 +154,7 @@ function collectContent(type) {
       name: sanitizeText(finalNameOnly, false), // 사용할 수 없는 문자열을 제거한 finalNameOnly
       extension: extension // 확장자명
     });
-    
+
     // acc를 뒤에 나올 [] 배열에 순서대로 정렬
     return acc;
   }, []);

@@ -5,7 +5,8 @@ chrome.contextMenus.create({
   type: "normal",
   contexts: ["page"],
   documentUrlPatterns: [
-    "https://kemono.cr/*/post/*"
+    "https://kemono.cr/*/post/*",
+    "https://pawchive.st/*/post/*"
   ]
 });
 
@@ -19,7 +20,7 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
 
 // 단축키 추가
 browser.commands.onCommand.addListener((command) => {
-    if (command === "download") {
+  if (command === "download") {
     browser.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       browser.tabs.sendMessage(tabs[0].id, { message: "getImage" });
     });
@@ -30,7 +31,7 @@ browser.commands.onCommand.addListener((command) => {
 browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'update') {
     details.previousVersion
-    
+
     // 방법 A: 새 탭 열기
     browser.tabs.create({ url: `update-notes.html?prev=${details.previousVersion}` });
   }

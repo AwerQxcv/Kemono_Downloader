@@ -1,7 +1,7 @@
 function localizeHtmlPage() {
   // data-l10n-id 속성을 가진 모든 요소를 찾습니다.
   const localizableElements = document.querySelectorAll('[data-l10n-id]');
-  
+
   localizableElements.forEach(elem => {
     // data-l10n-id 속성 값을 가져옵니다 (이것이 messages.json의 key가 됩니다).
     const messageKey = elem.getAttribute('data-l10n-id');

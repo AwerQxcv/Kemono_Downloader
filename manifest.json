@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Kemono_Downloader",
   "description": "__MSG_manifest_description__",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "default_locale": "en",
   "author": "AwerQxcv",
   "icons": {
@@ -12,12 +12,19 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://kemono.cr/*"],
-      "js": ["Kemono_Downloader.js"]
+      "matches": [
+        "https://kemono.cr/*",
+        "https://pawchive.st/*"
+      ],
+      "js": [
+        "Kemono_Downloader.js"
+      ]
     }
   ],
   "background": {
-    "scripts": ["event_page.js"]
+    "scripts": [
+      "event_page.js"
+    ]
   },
   "commands": {
     "download": {
@@ -33,9 +40,12 @@
     "tabs",
     "contextMenus",
     "notifications",
-    "*://kemono.cr/*"
+    "*://kemono.cr/*",
+    "*://pawchive.st/*"
   ],
-  "web_accessible_resources": ["icon.svg"],
+  "web_accessible_resources": [
+    "icon.svg"
+  ],
   "browser_action": {
     "default_icon": "icon_48.png",
     "default_title": "__MSG_manifest_download_options__",

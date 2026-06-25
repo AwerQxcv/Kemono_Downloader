@@ -1,76 +1,233 @@
 {
-  "manifest_description": { "message": "kemono.cr 게시글에서 우클릭하여 저장", "description": "이하 manifest.json용" },
-  "manifest_shortcut_desc": { "message": "다운로드 단축키 설정" },
-  "manifest_download_options": { "message": "다운로드 옵션" },
-
-  "context_menu_save_page": { "message": "해당 페이지를 저장", "description": "이하 settings.html용" },
-  "open_update_notes": { "message": "업데이트 내역 보기" },
-  "options_download_text": { "message": "텍스트 다운로드 여부" },
-  "options_download_images": { "message": "이미지 다운로드 여부" },
-  "options_download_attachments": { "message": "첨부 파일 다운로드 여부" },
-  "options_remove_duplicates_by_url": { "message": "중복된 URL을 다운로드 하지 않음" },
-  "options_download_path": { "message": "다운로드 경로 설정" },
-  "options_base_path": { "message": "기본 다운로드 경로 (상위 경로)" },
-  "options_text_path": { "message": "텍스트 파일 경로" },
-  "options_images_path": { "message": "이미지 저장 경로" },
-  "options_attachments_path": { "message": "첨부파일 저장 경로" },
-  "options_macro_table": { "message": "리네임 매크로 일란표" },
-  "options_reset_button": { "message": "기본 설정으로 초기화" },
-  "macro_table_header_macro": { "message": "매크로" },
-  "macro_table_header_description": { "message": "설명" },
-  "macro_table_header_general": { "message": "일반 매크로" },
-  "macro_table_header_image": { "message": "이미지 관련 매크로" },
-  "macro_table_header_attachment": { "message": "첨부파일 관련 매크로" },
-  "macro_table_header_publication_time": { "message": "업로드 시각 매크로" },
-  "macro_table_header_current_time": { "message": "현재 시각 매크로" },
-  "macro_desc_platform": { "message": "플랫폼의 이름" },
-  "macro_desc_user_name": { "message": "User의 이름" },
-  "macro_desc_user_id": { "message": "유저 ID" },
-  "macro_desc_page_id": { "message": "페이지 ID" },
-  "macro_desc_title": { "message": "게시글 제목\n100자를 넘는 게시글의 경우 뒷부분이 생략됩니다." },
-  "macro_desc_img_total": { "message": "이미지 총 개수" },
-  "macro_desc_img_number": { "message": "이미지 번호, 0을 채우지 않고 저장합니다." },
-  "macro_desc_img_number_x": { "message": "이미지 번호, 0을 채웁니다.\nX자리수로 빈공간에 0을 채워 파일을 저장합니다." },
-  "macro_desc_img_name": { "message": "원본 이미지 파일 이름" },
-  "macro_desc_att_total": { "message": "첨부파일 총 개수" },
-  "macro_desc_att_number": { "message": "첨부파일 번호, 0을 채우지 않고 저장합니다." },
-  "macro_desc_att_number_x": { "message": "첨부파일 번호, 0을 채웁니다.\nX자리수로 빈공간에 0을 채워 파일을 저장합니다." },
-  "macro_desc_att_name": { "message": "원본 첨부파일 이름" },
-  "macro_desc_year": { "message": "연" },
-  "macro_desc_year_short": { "message": "연 (마지막 2자리)" },
-  "macro_desc_month": { "message": "월" },
-  "macro_desc_day": { "message": "일" },
-  "macro_desc_hour": { "message": "시" },
-  "macro_desc_minute": { "message": "분" },
-  "alert_first_run": { "message": "kemono-downloader Ver $1:\n버전 업데이트 후 최초 1회 표시되는 메시지입니다.\n기본 설정으로 초기화 되었습니다.\n확인 후 본인 환경에 맞게 다시 설정해주세요." },
-  "popup_info_text": { "message": "확장 프로그램 설정 페이지에서 다운로드 경로를 수정할 수 있습니다." },
-  "button_open_settings": { "message": "설정 페이지 열기" },
-  "notify_path_cleaned_title": { "message": "경로가 변경되었습니다." },
-  "notify_path_cleaned_message": { "message": "사용할 수 없는 문자를 변경했습니다. 변경된 경로: $1"},
-  "help_download_text": { "message": "해당 항목이 <b>활성화</b>되어있다면 \"<u>게시글</u>\" 내부의 텍스트를 다운로드 합니다." },
-  "help_download_images": { "message": "해당 항목이 <b>활성화</b>되어있다면 \"<u>Files</u>\" 내부의 이미지를 다운로드 합니다. 다운로드는 원본 이미지 해상도로 다운됩니다." },
-  "help_download_attachments": { "message": "해당 항목이 <b>활성화</b>되어있다면 \"<u>Downloads</u>\" 내부의 첨부파일을 다운로드 합니다." },
-  "help_remove_duplicates_by_url": { "message": "만약 이미지 혹은 첨부파일이 같은 주소로 여러번 다운로드 된다면 해당 기능을 참고하십시오.<ul><li><b>활성화</b> - 같은 주소의 파일은 한 번만 다운로드합니다.</li><li><b>비활성화</b> - 같은 주소의 파일이라도 여러번 다운로드 합니다.</li></ul>" },
-  "help_base_path": { "message": "파일이 다운로드 될 기본 경로를 지정합니다.<br/>\"브라우저 기본 경로\"+\"기본 다운로드 경로\"+\"~파일 경로\" 순으로 경로가 지정되며, 폴더 구분은 '/' 를 사용합니다.<br/>해당 매크로에는 <u>일반 매크로</u>와 <u>시간 매크로</u>만을 사용해주세요." },
-  "help_text_path": { "message": "텍스트가 다운로드 될 경로를 지정합니다. 다운로드는 \"기본 다운로드 경로\"/\"텍스트 파일 경로\".txt입니다.<br/>매크로를 지정할 수 있으나, 필요한 경우가 아니라면 기본값으로 사용하기를 권장합니다.<br/>해당 매크로에는 <u>일반 매크로</u>와 <u>시간 매크로</u>만을 사용해주세요." },
-  "help_images_path": { "message": "이미지가 다운로드 될 경로를 지정합니다. 다운로드는 \"기본 다운로드 경로\"/\"이미지 저장 경로\" 입니다.<br/>해당 매크로에는 <u>일반 매크로</u>, <u>시각 매크로</u>와 <u>이미지 관련 매크로</u>를 사용해주세요." },
-  "help_attachments_path": { "message": "첨부파일이 다운로드 될 경로를 지정합니다. 다운로드는 \"기본 다운로드 경로\"/\"첨부파일 저장 경로\" 입니다.<br/>해당 매크로에는 <u>일반 매크로</u>, <u>시각 매크로</u>와 <u>첨부파일 관련 매크로</u>를 사용해주세요." },
-  "help_macro_list": { "message": "매크로 왼편의 아이콘을 클릭해서 복사할 수 있습니다." },
-  "warning_save_problems": { "message": "사용할 수 없는 매크로가 발견되었습니다. 강조된 부분을 알맞게 수정한 후 <b>[>][<]</b>를 삭제 후 다시 한 번 저장 버튼을 눌러주세요." },
-
-  "update_notes_title": { "message": "업데이트 노트", "description": "이하 Update-notes.html용" },
-  "update_notes_description": { "message": "KEMONO DOWNLOADER 업데이트"},
-  "update_notes_what_changed": { "message": "무엇이 바뀌었나요?"},
-  "update_notes_previous_version": { "message": "이전 버전"},
-  "update_notes_current_version": { "message": "현재 버전"},
-  "update_notes_changes": { "message": "변경사항"},
-  "update_notes_new": { "message": "새로운 기능"},
-  "update_notes_new_title": { "message": "새로운 기능"},
-  "update_notes_new_desc": { "message": "v1.2.3 : 단축키를 통한 다운로드 기능이 추가되었습니다. 기본 단축키는 'Ctrl+Shift+F' 입니다.\n"},
-  "update_notes_imp": { "message": "개선된 기능"},
-  "update_notes_imp_title": { "message": "개선된 기능"},
-  "update_notes_imp_desc": { "message": "v1.2.4 : 앞으로 업데이트마다 팝업 창을 통한 업데이트 확인 기능으로 무엇이 변경됐는지 알기 쉽게끔 하였습니다.\n또한 업데이트 내역을 설정 페이지에서 열어볼 수 있게끔 설정하였습니다."},
-  "update_notes_fix_title": { "message": "수정된 버그"},
-  "update_notes_fix_desc": { "message": "v1.2.5 : 다운로드가 정상적으로 진행되지 않을 시 자동으로 재시도하는 기능을 추가하였습니다.\n해당 페이지를 벗어날 시, 혹은 kemono 서버 자체의 문제가 있을 경우 취소합니다."},
-  "update_notes_bug_report": { "message": "🐛 버그 제보"}
+  "manifest_description": {
+    "message": "kemono.cr 게시글에서 우클릭하여 저장",
+    "description": "이하 manifest.json용"
+  },
+  "manifest_shortcut_desc": {
+    "message": "다운로드 단축키 설정"
+  },
+  "manifest_download_options": {
+    "message": "다운로드 옵션"
+  },
+  "context_menu_save_page": {
+    "message": "해당 페이지를 저장",
+    "description": "이하 settings.html용"
+  },
+  "open_update_notes": {
+    "message": "업데이트 내역 보기"
+  },
+  "options_download_text": {
+    "message": "텍스트 다운로드 여부"
+  },
+  "options_download_images": {
+    "message": "이미지 다운로드 여부"
+  },
+  "options_download_attachments": {
+    "message": "첨부 파일 다운로드 여부"
+  },
+  "options_remove_duplicates_by_url": {
+    "message": "중복된 URL을 다운로드 하지 않음"
+  },
+  "options_download_path": {
+    "message": "다운로드 경로 설정"
+  },
+  "options_base_path": {
+    "message": "기본 다운로드 경로 (상위 경로)"
+  },
+  "options_text_path": {
+    "message": "텍스트 파일 경로"
+  },
+  "options_images_path": {
+    "message": "이미지 저장 경로"
+  },
+  "options_attachments_path": {
+    "message": "첨부파일 저장 경로"
+  },
+  "options_macro_table": {
+    "message": "리네임 매크로 일란표"
+  },
+  "options_reset_button": {
+    "message": "기본 설정으로 초기화"
+  },
+  "macro_table_header_macro": {
+    "message": "매크로"
+  },
+  "macro_table_header_description": {
+    "message": "설명"
+  },
+  "macro_table_header_general": {
+    "message": "일반 매크로"
+  },
+  "macro_table_header_image": {
+    "message": "이미지 관련 매크로"
+  },
+  "macro_table_header_attachment": {
+    "message": "첨부파일 관련 매크로"
+  },
+  "macro_table_header_publication_time": {
+    "message": "업로드 시각 매크로"
+  },
+  "macro_table_header_current_time": {
+    "message": "현재 시각 매크로"
+  },
+  "macro_desc_platform": {
+    "message": "플랫폼의 이름"
+  },
+  "macro_desc_user_name": {
+    "message": "User의 이름"
+  },
+  "macro_desc_user_id": {
+    "message": "유저 ID"
+  },
+  "macro_desc_page_id": {
+    "message": "페이지 ID"
+  },
+  "macro_desc_title": {
+    "message": "게시글 제목\n100자를 넘는 게시글의 경우 뒷부분이 생략됩니다."
+  },
+  "macro_desc_img_total": {
+    "message": "이미지 총 개수"
+  },
+  "macro_desc_img_number": {
+    "message": "이미지 번호, 0을 채우지 않고 저장합니다."
+  },
+  "macro_desc_img_number_x": {
+    "message": "이미지 번호, 0을 채웁니다.\nX자리수로 빈공간에 0을 채워 파일을 저장합니다."
+  },
+  "macro_desc_img_name": {
+    "message": "원본 이미지 파일 이름"
+  },
+  "macro_desc_att_total": {
+    "message": "첨부파일 총 개수"
+  },
+  "macro_desc_att_number": {
+    "message": "첨부파일 번호, 0을 채우지 않고 저장합니다."
+  },
+  "macro_desc_att_number_x": {
+    "message": "첨부파일 번호, 0을 채웁니다.\nX자리수로 빈공간에 0을 채워 파일을 저장합니다."
+  },
+  "macro_desc_att_name": {
+    "message": "원본 첨부파일 이름"
+  },
+  "macro_desc_year": {
+    "message": "연"
+  },
+  "macro_desc_year_short": {
+    "message": "연 (마지막 2자리)"
+  },
+  "macro_desc_month": {
+    "message": "월"
+  },
+  "macro_desc_day": {
+    "message": "일"
+  },
+  "macro_desc_hour": {
+    "message": "시"
+  },
+  "macro_desc_minute": {
+    "message": "분"
+  },
+  "alert_first_run": {
+    "message": "kemono-downloader Ver $1:\n버전 업데이트 후 최초 1회 표시되는 메시지입니다.\n기본 설정으로 초기화 되었습니다.\n확인 후 본인 환경에 맞게 다시 설정해주세요."
+  },
+  "popup_info_text": {
+    "message": "확장 프로그램 설정 페이지에서 다운로드 경로를 수정할 수 있습니다."
+  },
+  "button_open_settings": {
+    "message": "설정 페이지 열기"
+  },
+  "notify_path_cleaned_title": {
+    "message": "경로가 변경되었습니다."
+  },
+  "notify_path_cleaned_message": {
+    "message": "사용할 수 없는 문자를 변경했습니다. 변경된 경로: $1"
+  },
+  "help_download_text": {
+    "message": "해당 항목이 <b>활성화</b>되어있다면 \"<u>게시글</u>\" 내부의 텍스트를 다운로드 합니다."
+  },
+  "help_download_images": {
+    "message": "해당 항목이 <b>활성화</b>되어있다면 \"<u>Files</u>\" 내부의 이미지를 다운로드 합니다. 다운로드는 원본 이미지 해상도로 다운됩니다."
+  },
+  "help_download_attachments": {
+    "message": "해당 항목이 <b>활성화</b>되어있다면 \"<u>Downloads</u>\" 내부의 첨부파일을 다운로드 합니다."
+  },
+  "help_remove_duplicates_by_url": {
+    "message": "만약 이미지 혹은 첨부파일이 같은 주소로 여러번 다운로드 된다면 해당 기능을 참고하십시오.<ul><li><b>활성화</b> - 같은 주소의 파일은 한 번만 다운로드합니다.</li><li><b>비활성화</b> - 같은 주소의 파일이라도 여러번 다운로드 합니다.</li></ul>"
+  },
+  "help_base_path": {
+    "message": "파일이 다운로드 될 기본 경로를 지정합니다.<br/>\"브라우저 기본 경로\"+\"기본 다운로드 경로\"+\"~파일 경로\" 순으로 경로가 지정되며, 폴더 구분은 '/' 를 사용합니다.<br/>해당 매크로에는 <u>일반 매크로</u>와 <u>시간 매크로</u>만을 사용해주세요."
+  },
+  "help_text_path": {
+    "message": "텍스트가 다운로드 될 경로를 지정합니다. 다운로드는 \"기본 다운로드 경로\"/\"텍스트 파일 경로\".txt입니다.<br/>매크로를 지정할 수 있으나, 필요한 경우가 아니라면 기본값으로 사용하기를 권장합니다.<br/>해당 매크로에는 <u>일반 매크로</u>와 <u>시간 매크로</u>만을 사용해주세요."
+  },
+  "help_images_path": {
+    "message": "이미지가 다운로드 될 경로를 지정합니다. 다운로드는 \"기본 다운로드 경로\"/\"이미지 저장 경로\" 입니다.<br/>해당 매크로에는 <u>일반 매크로</u>, <u>시각 매크로</u>와 <u>이미지 관련 매크로</u>를 사용해주세요."
+  },
+  "help_attachments_path": {
+    "message": "첨부파일이 다운로드 될 경로를 지정합니다. 다운로드는 \"기본 다운로드 경로\"/\"첨부파일 저장 경로\" 입니다.<br/>해당 매크로에는 <u>일반 매크로</u>, <u>시각 매크로</u>와 <u>첨부파일 관련 매크로</u>를 사용해주세요."
+  },
+  "help_macro_list": {
+    "message": "매크로 왼편의 아이콘을 클릭해서 복사할 수 있습니다."
+  },
+  "warning_save_problems": {
+    "message": "사용할 수 없는 매크로가 발견되었습니다. 강조된 부분을 알맞게 수정한 후 <b>[>][<]</b>를 삭제 후 다시 한 번 저장 버튼을 눌러주세요."
+  },
+  "update_notes_title": {
+    "message": "업데이트 노트",
+    "description": "이하 Update-notes.html용"
+  },
+  "update_notes_description": {
+    "message": "KEMONO DOWNLOADER 업데이트"
+  },
+  "update_notes_what_changed": {
+    "message": "무엇이 바뀌었나요?"
+  },
+  "update_notes_previous_version": {
+    "message": "이전 버전"
+  },
+  "update_notes_current_version": {
+    "message": "현재 버전"
+  },
+  "update_notes_changes": {
+    "message": "변경사항"
+  },
+  "update_notes_new": {
+    "message": "새로운 기능"
+  },
+  "update_notes_new_title": {
+    "message": "새로운 기능"
+  },
+  "update_notes_new_desc": {
+    "message": "v1.2.6 : 수상할 정도로 케모노와 유사한 사이트인 pawchive.st 에서의 다운로드도 가능하게 하였습니다..\n"
+  },
+  "update_notes_imp": {
+    "message": "개선된 기능"
+  },
+  "update_notes_imp_title": {
+    "message": "개선된 기능"
+  },
+  "update_notes_imp_desc": {
+    "message": "v1.2.6 : 해당 버전에서는 없습니다."
+  },
+  "update_notes_fix_title": {
+    "message": "수정된 버그"
+  },
+  "update_notes_fix_desc": {
+    "message": "v1.2.6 : 수정된 버그는 없습니다만, 만약 다운로드가 곧장 실패한다면, pawchive 본문에 있는 다운로드 링크를 눌러 사람인지를 검증하는 페이지가 나오는 지확인해주세요. 만약 나온다면, 사람임을 인증한 후에 다시 확장프로그램을 사용하시면 됩니다."
+  },
+  "update_notes_bug_report": {
+    "message": "🐛 버그 제보"
+  },
+  "update_notes_history_toggle": {
+    "message": "이전 업데이트 내역 펼치기"
+  },
+  "update_notes_history_v125": {
+    "message": "v1.2.5 — 다운로드 실패 시 자동 재시도 기능 추가"
+  },
+  "update_notes_history_v124": {
+    "message": "v1.2.4 — 업데이트 팝업 알림 및 설정 페이지 내 업데이트 내역 열람 기능 추가"
+  },
+  "update_notes_history_v123": {
+    "message": "v1.2.3 — 단축키(Ctrl+Shift+F)를 통한 다운로드 기능 추가"
+  }
 }
