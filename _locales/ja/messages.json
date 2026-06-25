@@ -1,76 +1,233 @@
 {
-  "manifest_description": { "message": "kemono.crの投稿を右クリックして保存", "description": "以下manifest.json用" },
-  "manifest_shortcut_desc": { "message": "ダウンロードショートカットの設定" },
-  "manifest_download_options": { "message": "ダウンロードオプション" },
-
-  "context_menu_save_page": { "message": "ページを保存", "description": "以下settings.html用" },
-  "open_update_notes": { "message": "アップデート内容の表示" },
-  "options_download_text": { "message": "テキストをダウンロード" },
-  "options_download_images": { "message": "画像をダウンロード" },
-  "options_download_attachments": { "message": "添付ファイルをダウンロード" },
-  "options_remove_duplicates_by_url": { "message": "同じURLをダウンロードしない" },
-  "options_download_path": { "message": "保存先を設定" },
-  "options_base_path": { "message": "基本保存先" },
-  "options_text_path": { "message": "テキストの保存先" },
-  "options_images_path": { "message": "画像の保存先" },
-  "options_attachments_path": { "message": "添付ファイルの保存先" },
-  "options_macro_table": { "message": "マクロ一覧表" },
-  "options_reset_button": { "message": "基本設定に戻す" },
-  "macro_table_header_macro": { "message": "マクロ" },
-  "macro_table_header_description": { "message": "説明" },
-  "macro_table_header_general": { "message": "一般マクロ" },
-  "macro_table_header_image": { "message": "画像マクロ" },
-  "macro_table_header_attachment": { "message": "添付ファイルマクロ" },
-  "macro_table_header_publication_time": { "message": "掲示時刻マクロ" },
-  "macro_table_header_current_time": { "message": "現在時刻マクロ" },
-  "macro_desc_platform": { "message": "プラットフォーム名" },
-  "macro_desc_user_name": { "message": "ユーザー名" },
-  "macro_desc_user_id": { "message": "ユーザーID" },
-  "macro_desc_page_id": { "message": "ページID" },
-  "macro_desc_title": { "message": "ポストタイトル\n100文字を超えるタイトルは省略されます。" },
-  "macro_desc_img_total": { "message": "画像の数" },
-  "macro_desc_img_number": { "message": "0埋めせずに画像に番号を付けます。" },
-  "macro_desc_img_number_x": { "message": "0埋めして画像に番号を付けます。\nXに桁数を入力して指定します。" },
-  "macro_desc_img_name": { "message": "元の画像の名前" },
-  "macro_desc_att_total": { "message": "添付ファイルの数" },
-  "macro_desc_att_number": { "message": "0埋めせずに添付ファイルに番号を付けます。" },
-  "macro_desc_att_number_x": { "message": "0埋めして添付ファイルに番号を付けます。\nXに桁数を入力して指定します。" },
-  "macro_desc_att_name": { "message": "元の添付ファイル名" },
-  "macro_desc_year": { "message": "年" },
-  "macro_desc_year_short": { "message": "年 (2桁)" },
-  "macro_desc_month": { "message": "月" },
-  "macro_desc_day": { "message": "日" },
-  "macro_desc_hour": { "message": "時" },
-  "macro_desc_minute": { "message": "分" },
-  "alert_first_run": { "message": "kemono-downloader Ver $1:\nバージョンアップデート後最初の1回だけ表示されます。\nアップデートで変更があったためデフォルトの設定に変更されました。\nお手数ですが確認後自分の環境に合わせて調整してください。" },
-  "popup_info_text": { "message": "Add-on設定ページで保存先を変更することができます。" },
-  "button_open_settings": { "message": "設定を開く" },
-  "notify_path_cleaned_title": { "message": "保存先が変更されました。" },
-  "notify_path_cleaned_message": { "message": "使用できない文字を変換しました　保存先は: $1です。"},
-  "help_download_text": { "message": "もし<b>チェック</b>されていたら「<u>Content</u>」内のテキストをダウンロードします。" },
-  "help_download_images": { "message": "もし<b>チェック</b>されていたら「<u>Files</u>」内の画像をダウンロードします。画像はオリジナルサイズの画像がダウンロードされます。" },
-  "help_download_attachments": { "message": "もし<b>チェック</b>されていたら「<u>Files</u>」内の添付ファイルをダウンロードします。" },
-  "help_remove_duplicates_by_url": { "message": "もし<b>チェック</b>されていたら画像または添付ファイルが同じURLで複数ダウンロードされないようにします。" },
-  "help_base_path": { "message": "ファイルがダウンロードされる保存先を指定します。<br/>保存先は「ぷラウザーの保存先」＋「基本保存先」＋「○○保存先」順で保存先が指定され、フォルダーの区分には「/」を使います。<br/>このマクロには<u>一般マクロ</u>と<u>時刻マクロ</u>を使用してください。" },
-  "help_text_path": { "message": "テキストがダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「テキストの保存先」順で保存先が指定され、拡張子は「txt」で保存されます。<br/>マクロ指定は可能でありますが、必要でなければデフォルトでの使用をお勧めします。<br/>このマクロには<u>一般マクロ</u>と<u>時刻マクロ</u>を使用してください。" },
-  "help_images_path": { "message": "画像がダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「画像の保存先」順で保存先が指定されます。<br/>このマクロには<u>一般マクロ</u>、<u>時刻マクロ</u>と<u>画像マクロ</u>を使用してください。" },
-  "help_attachments_path": { "message": "添付ファイルがダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「添付ファイル保存先」順で保存先が指定されます。<br/>このマクロには<u>一般マクロ</u>、<u>時刻マクロ</u>と<u>添付ファイルマクロ</u>を使用してください。" },
-  "help_macro_list": { "message": "マクロの左のアイコンをクリックしてコピーできます。" },
-  "warning_save_problems": { "message": "使用できないマクロが入力されました。強調された部分を正しく直した後<b>[>][<]</b>を削除しもう一度保存ボタンを押してください。" },
-
-  "update_notes_title": { "message": "アップデートノート", "description": "以下Update-notes.html用" },
-  "update_notes_description": { "message": "KEMONO DOWNLOADER アップデート" },
-  "update_notes_what_changed": { "message": "何が変わりましたか？" },
-  "update_notes_previous_version": { "message": "以前のバージョン" },
-  "update_notes_current_version": { "message": "現在のバージョン" },
-  "update_notes_changes": { "message": "変更内容" },
-  "update_notes_new": { "message": "新機能" },
-  "update_notes_new_title": { "message": "新機能" },
-  "update_notes_new_desc": { "message": "ショートカットキーによるダウンロード機能が追加されました。デフォルトのショートカットキーは「Ctrl+Shift+F」です。" },
-  "update_notes_imp": { "message": "改善された機能" },
-  "update_notes_imp_title": { "message": "改善された機能" },
-  "update_notes_imp_desc": { "message": "今後のアップデートごとに、ポップアップウィンドウで変更内容を確認できるようになりました。\nまた、アップデート履歴を設定ページから確認できるようになりました。" },
-  "update_notes_fix_title": { "message": "修正されたバグ"},
-  "update_notes_fix_desc": { "message": "v1.2.5：ダウンロードが正常に進行されなかった場合、再試行する機能が追加されました。\n該当ページを離れるかemonoサーバー自体の問題がある場合、キャンセルされます。"},
-  "update_notes_bug_report": { "message": "🐛 バグ報告" }
+  "manifest_description": {
+    "message": "kemono.crの投稿を右クリックして保存",
+    "description": "以下manifest.json用"
+  },
+  "manifest_shortcut_desc": {
+    "message": "ダウンロードショートカットの設定"
+  },
+  "manifest_download_options": {
+    "message": "ダウンロードオプション"
+  },
+  "context_menu_save_page": {
+    "message": "ページを保存",
+    "description": "以下settings.html用"
+  },
+  "open_update_notes": {
+    "message": "アップデート内容の表示"
+  },
+  "options_download_text": {
+    "message": "テキストをダウンロード"
+  },
+  "options_download_images": {
+    "message": "画像をダウンロード"
+  },
+  "options_download_attachments": {
+    "message": "添付ファイルをダウンロード"
+  },
+  "options_remove_duplicates_by_url": {
+    "message": "同じURLをダウンロードしない"
+  },
+  "options_download_path": {
+    "message": "保存先を設定"
+  },
+  "options_base_path": {
+    "message": "基本保存先"
+  },
+  "options_text_path": {
+    "message": "テキストの保存先"
+  },
+  "options_images_path": {
+    "message": "画像の保存先"
+  },
+  "options_attachments_path": {
+    "message": "添付ファイルの保存先"
+  },
+  "options_macro_table": {
+    "message": "マクロ一覧表"
+  },
+  "options_reset_button": {
+    "message": "基本設定に戻す"
+  },
+  "macro_table_header_macro": {
+    "message": "マクロ"
+  },
+  "macro_table_header_description": {
+    "message": "説明"
+  },
+  "macro_table_header_general": {
+    "message": "一般マクロ"
+  },
+  "macro_table_header_image": {
+    "message": "画像マクロ"
+  },
+  "macro_table_header_attachment": {
+    "message": "添付ファイルマクロ"
+  },
+  "macro_table_header_publication_time": {
+    "message": "掲示時刻マクロ"
+  },
+  "macro_table_header_current_time": {
+    "message": "現在時刻マクロ"
+  },
+  "macro_desc_platform": {
+    "message": "プラットフォーム名"
+  },
+  "macro_desc_user_name": {
+    "message": "ユーザー名"
+  },
+  "macro_desc_user_id": {
+    "message": "ユーザーID"
+  },
+  "macro_desc_page_id": {
+    "message": "ページID"
+  },
+  "macro_desc_title": {
+    "message": "ポストタイトル\n100文字を超えるタイトルは省略されます。"
+  },
+  "macro_desc_img_total": {
+    "message": "画像の数"
+  },
+  "macro_desc_img_number": {
+    "message": "0埋めせずに画像に番号を付けます。"
+  },
+  "macro_desc_img_number_x": {
+    "message": "0埋めして画像に番号を付けます。\nXに桁数を入力して指定します。"
+  },
+  "macro_desc_img_name": {
+    "message": "元の画像の名前"
+  },
+  "macro_desc_att_total": {
+    "message": "添付ファイルの数"
+  },
+  "macro_desc_att_number": {
+    "message": "0埋めせずに添付ファイルに番号を付けます。"
+  },
+  "macro_desc_att_number_x": {
+    "message": "0埋めして添付ファイルに番号を付けます。\nXに桁数を入力して指定します。"
+  },
+  "macro_desc_att_name": {
+    "message": "元の添付ファイル名"
+  },
+  "macro_desc_year": {
+    "message": "年"
+  },
+  "macro_desc_year_short": {
+    "message": "年 (2桁)"
+  },
+  "macro_desc_month": {
+    "message": "月"
+  },
+  "macro_desc_day": {
+    "message": "日"
+  },
+  "macro_desc_hour": {
+    "message": "時"
+  },
+  "macro_desc_minute": {
+    "message": "分"
+  },
+  "alert_first_run": {
+    "message": "kemono-downloader Ver $1:\nバージョンアップデート後最初の1回だけ表示されます。\nアップデートで変更があったためデフォルトの設定に変更されました。\nお手数ですが確認後自分の環境に合わせて調整してください。"
+  },
+  "popup_info_text": {
+    "message": "Add-on設定ページで保存先を変更することができます。"
+  },
+  "button_open_settings": {
+    "message": "設定を開く"
+  },
+  "notify_path_cleaned_title": {
+    "message": "保存先が変更されました。"
+  },
+  "notify_path_cleaned_message": {
+    "message": "使用できない文字を変換しました　保存先は: $1です。"
+  },
+  "help_download_text": {
+    "message": "もし<b>チェック</b>されていたら「<u>Content</u>」内のテキストをダウンロードします。"
+  },
+  "help_download_images": {
+    "message": "もし<b>チェック</b>されていたら「<u>Files</u>」内の画像をダウンロードします。画像はオリジナルサイズの画像がダウンロードされます。"
+  },
+  "help_download_attachments": {
+    "message": "もし<b>チェック</b>されていたら「<u>Files</u>」内の添付ファイルをダウンロードします。"
+  },
+  "help_remove_duplicates_by_url": {
+    "message": "もし<b>チェック</b>されていたら画像または添付ファイルが同じURLで複数ダウンロードされないようにします。"
+  },
+  "help_base_path": {
+    "message": "ファイルがダウンロードされる保存先を指定します。<br/>保存先は「ぷラウザーの保存先」＋「基本保存先」＋「○○保存先」順で保存先が指定され、フォルダーの区分には「/」を使います。<br/>このマクロには<u>一般マクロ</u>と<u>時刻マクロ</u>を使用してください。"
+  },
+  "help_text_path": {
+    "message": "テキストがダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「テキストの保存先」順で保存先が指定され、拡張子は「txt」で保存されます。<br/>マクロ指定は可能でありますが、必要でなければデフォルトでの使用をお勧めします。<br/>このマクロには<u>一般マクロ</u>と<u>時刻マクロ</u>を使用してください。"
+  },
+  "help_images_path": {
+    "message": "画像がダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「画像の保存先」順で保存先が指定されます。<br/>このマクロには<u>一般マクロ</u>、<u>時刻マクロ</u>と<u>画像マクロ</u>を使用してください。"
+  },
+  "help_attachments_path": {
+    "message": "添付ファイルがダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「添付ファイル保存先」順で保存先が指定されます。<br/>このマクロには<u>一般マクロ</u>、<u>時刻マクロ</u>と<u>添付ファイルマクロ</u>を使用してください。"
+  },
+  "help_macro_list": {
+    "message": "マクロの左のアイコンをクリックしてコピーできます。"
+  },
+  "warning_save_problems": {
+    "message": "使用できないマクロが入力されました。強調された部分を正しく直した後<b>[>][<]</b>を削除しもう一度保存ボタンを押してください。"
+  },
+  "update_notes_title": {
+    "message": "アップデートノート",
+    "description": "以下Update-notes.html用"
+  },
+  "update_notes_description": {
+    "message": "KEMONO DOWNLOADER アップデート"
+  },
+  "update_notes_what_changed": {
+    "message": "何が変わりましたか？"
+  },
+  "update_notes_previous_version": {
+    "message": "以前のバージョン"
+  },
+  "update_notes_current_version": {
+    "message": "現在のバージョン"
+  },
+  "update_notes_changes": {
+    "message": "変更内容"
+  },
+  "update_notes_new": {
+    "message": "新機能"
+  },
+  "update_notes_new_title": {
+    "message": "新機能"
+  },
+  "update_notes_new_desc": {
+    "message": "v1.2.6 : Kemonoと怪しいほどよく似たサイト、pawchive.st でのダウンロードにも対応しました。\n"
+  },
+  "update_notes_imp": {
+    "message": "改善された機能"
+  },
+  "update_notes_imp_title": {
+    "message": "改善された機能"
+  },
+  "update_notes_imp_desc": {
+    "message": "v1.2.6 : このバージョンでの改善はありません。"
+  },
+  "update_notes_fix_title": {
+    "message": "修正されたバグ"
+  },
+  "update_notes_fix_desc": {
+    "message": "v1.2.6 : 修正されたバグはありませんが、ダウンロードがすぐに失敗する場合は、pawchiveのページ内のダウンロードリンクをクリックして、人間であることを確認するページが表示されるか確認してください。表示された場合は、認証を完了してから再度拡張機能をご使用ください。"
+  },
+  "update_notes_bug_report": {
+    "message": "🐛 バグ報告"
+  },
+  "update_notes_history_toggle": {
+    "message": "以前のアップデート履歴を表示"
+  },
+  "update_notes_history_v125": {
+    "message": "v1.2.5 — ダウンロード失敗時の自動再試行機能を追加"
+  },
+  "update_notes_history_v124": {
+    "message": "v1.2.4 — アップデートポップアップ通知および設定ページでの履歴確認機能を追加"
+  },
+  "update_notes_history_v123": {
+    "message": "v1.2.3 — ショートカットキー(Ctrl+Shift+F)によるダウンロード機能を追加"
+  }
 }

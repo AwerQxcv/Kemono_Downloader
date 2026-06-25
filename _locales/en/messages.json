@@ -1,76 +1,233 @@
 {
-  "manifest_description": { "message": "Right-click on kemono.cr posts to save", "description": "Below for manifest.json" },
-  "manifest_shortcut_desc": { "message": "Configure download shortcut" },
-  "manifest_download_options": { "message": "Download Options" },
-  
-  "context_menu_save_page": { "message": "Save page", "description": "Below for settings.html" },
-  "open_update_notes": { "message": "Open Update Notes" },
-  "options_download_text": { "message": "Download text" },
-  "options_download_images": { "message": "Download images" },
-  "options_download_attachments": { "message": "Download attachments" },
-  "options_remove_duplicates_by_url": { "message": "Remove duplicates by URL" },
-  "options_download_path": { "message": "Paths for file downloads" },
-  "options_base_path": { "message": "General part of the path" },
-  "options_text_path": { "message": "Part of the path for saving text" },
-  "options_images_path": { "message": "Part of the path for saving images" },
-  "options_attachments_path": { "message": "Part of the path for saving attachments" },
-  "options_macro_table": { "message": "Table of macros" },
-  "options_reset_button": { "message": "Reset to default settings" },
-  "macro_table_header_macro": { "message": "Macro" },
-  "macro_table_header_description": { "message": "Description" },
-  "macro_table_header_general": { "message": "General macros" },
-  "macro_table_header_image": { "message": "Image macros" },
-  "macro_table_header_attachment": { "message": "Attachment macros" },
-  "macro_table_header_publication_time": { "message": "Publication time macros" },
-  "macro_table_header_current_time": { "message": "Current time macros" },
-  "macro_desc_platform": { "message": "Name of the platform" },
-  "macro_desc_user_name": { "message": "Name of the user" },
-  "macro_desc_user_id": { "message": "User ID" },
-  "macro_desc_page_id": { "message": "Page ID" },
-  "macro_desc_title": { "message": "Post title\nLong title is truncated to 100 characters" },
-  "macro_desc_img_total": { "message": "Total number of images" },
-  "macro_desc_img_number": { "message": "Image number without leading zeros" },
-  "macro_desc_img_number_x": { "message": "Image number with leading zeros\nReplace X with the desired number of digits" },
-  "macro_desc_img_name": { "message": "Original image name" },
-  "macro_desc_att_total": { "message": "Total number of attachments" },
-  "macro_desc_att_number": { "message": "Attachment number without leading zeros" },
-  "macro_desc_att_number_x": { "message": "Attachment number with leading zeros\nReplace X with the desired number of digits" },
-  "macro_desc_att_name": { "message": "Original attachment name" },
-  "macro_desc_year": { "message": "Year" },
-  "macro_desc_year_short": { "message": "Year (short)" },
-  "macro_desc_month": { "message": "Month" },
-  "macro_desc_day": { "message": "Day" },
-  "macro_desc_hour": { "message": "Hour" },
-  "macro_desc_minute": { "message": "Minute" },
-  "alert_first_run": { "message": "kemono-downloader Ver $1:\nThis is the first launch after the version update.\nThe default settings are used.\nPlease check and adjust them if necessary." },
-  "popup_info_text": { "message": "Changing save paths is available on the main settings page." },
-  "button_open_settings": { "message": "Open Settings" },
-  "notify_path_cleaned_title": { "message": "The path has been changed" },
-  "notify_path_cleaned_message": { "message": "Invalid characters removed. Final path: $1"},
-  "help_download_text": { "message": "If <b>enabled</b>, text from the \"<u>Content</u>\" section will be downloaded. All images in this section will be ignored when downloading. All links will be saved as description text." },
-  "help_download_images": { "message": "If <b>enabled</b>, images from the \"<u>Files</u>\" section will be downloaded. Images in the \"<u>Content</u>\" section will not be downloaded." },
-  "help_download_attachments": { "message": "If <b>enabled</b>, attachments from the \"<u>Downloads</u>\" section will be downloaded." },
-  "help_remove_duplicates_by_url": { "message": "If the list of downloaded files (images or attachments) contains several files that are downloaded from the same address, this setting will affect the download: <ul><li><b>Enabled</b> - the file will be downloaded only once;</li><li><b>Disabled</b> - a copy of the file will be downloaded and saved.</li></ul>" },
-  "help_base_path": { "message": "The first, general part of the path where downloaded files will be saved. Depending on the content type, the corresponding part from the fields below will be appended to it, thus forming the full path and file name for saving.<br/>Macros are supported. When downloading files, macros will be replaced with the current values according to their description in the table at the bottom of the page. Only <u>general macros</u> and <u>time macros</u> can be used in this field." },
-  "help_text_path": { "message": "The second part of the path is for saving text. It may optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saving, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u> and <u>time macros</u> can be used for this path." },
-  "help_images_path": { "message": "The second part of the path is for saving images. It may optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saving, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u>, <u>time macros</u>, and <u>image macros</u> can be used for this path." },
-  "help_attachments_path": { "message": "The second part of the path is for saving attachments. It can optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saved, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u>, <u>time macros</u>, and <u>attachment macros</u> can be used for this path." },
-  "help_macro_list": { "message": "To copy a macro, click the icon to the left of it." },
-  "warning_save_problems": { "message": "An invalid macro was detected. The location of the error is currently highlighted in the text. Remove the added <b>[>][<]</b> characters indicating the error and correct the path." },
-
-  "update_notes_title": { "message": "Update Notes", "description": "Below for Update-notes.html" },
-  "update_notes_description": { "message": "KEMONO DOWNLOADER Update" },
-  "update_notes_what_changed": { "message": "What's Changed?" },
-  "update_notes_previous_version": { "message": "Previous Version" },
-  "update_notes_current_version": { "message": "Current Version" },
-  "update_notes_changes": { "message": "Changes" },
-  "update_notes_new": { "message": "New" },
-  "update_notes_new_title": { "message": "New Feature" },
-  "update_notes_new_desc": { "message": "Download via keyboard shortcut has been added. The default shortcut is 'Ctrl+Shift+F'." },
-  "update_notes_imp": { "message": "Improved" },
-  "update_notes_imp_title": { "message": "Improvement" },
-  "update_notes_imp_desc": { "message": "From now on, each update will show a popup window summarizing what has changed.\nAdditionally, you can view update history from the settings page." },
-  "update_notes_fix_title": { "message": "Fixed Bugs"},
-  "update_notes_fix_desc": { "message": "v1.2.5 : If the download fails, a retry function has been added.\nIf you leave the page or there is an issue with the kemono server itself, the download will be canceled."},
-  "update_notes_bug_report": { "message": "🐛 Report a Bug" }
+  "manifest_description": {
+    "message": "Right-click on kemono.cr posts to save",
+    "description": "Below for manifest.json"
+  },
+  "manifest_shortcut_desc": {
+    "message": "Configure download shortcut"
+  },
+  "manifest_download_options": {
+    "message": "Download Options"
+  },
+  "context_menu_save_page": {
+    "message": "Save page",
+    "description": "Below for settings.html"
+  },
+  "open_update_notes": {
+    "message": "Open Update Notes"
+  },
+  "options_download_text": {
+    "message": "Download text"
+  },
+  "options_download_images": {
+    "message": "Download images"
+  },
+  "options_download_attachments": {
+    "message": "Download attachments"
+  },
+  "options_remove_duplicates_by_url": {
+    "message": "Remove duplicates by URL"
+  },
+  "options_download_path": {
+    "message": "Paths for file downloads"
+  },
+  "options_base_path": {
+    "message": "General part of the path"
+  },
+  "options_text_path": {
+    "message": "Part of the path for saving text"
+  },
+  "options_images_path": {
+    "message": "Part of the path for saving images"
+  },
+  "options_attachments_path": {
+    "message": "Part of the path for saving attachments"
+  },
+  "options_macro_table": {
+    "message": "Table of macros"
+  },
+  "options_reset_button": {
+    "message": "Reset to default settings"
+  },
+  "macro_table_header_macro": {
+    "message": "Macro"
+  },
+  "macro_table_header_description": {
+    "message": "Description"
+  },
+  "macro_table_header_general": {
+    "message": "General macros"
+  },
+  "macro_table_header_image": {
+    "message": "Image macros"
+  },
+  "macro_table_header_attachment": {
+    "message": "Attachment macros"
+  },
+  "macro_table_header_publication_time": {
+    "message": "Publication time macros"
+  },
+  "macro_table_header_current_time": {
+    "message": "Current time macros"
+  },
+  "macro_desc_platform": {
+    "message": "Name of the platform"
+  },
+  "macro_desc_user_name": {
+    "message": "Name of the user"
+  },
+  "macro_desc_user_id": {
+    "message": "User ID"
+  },
+  "macro_desc_page_id": {
+    "message": "Page ID"
+  },
+  "macro_desc_title": {
+    "message": "Post title\nLong title is truncated to 100 characters"
+  },
+  "macro_desc_img_total": {
+    "message": "Total number of images"
+  },
+  "macro_desc_img_number": {
+    "message": "Image number without leading zeros"
+  },
+  "macro_desc_img_number_x": {
+    "message": "Image number with leading zeros\nReplace X with the desired number of digits"
+  },
+  "macro_desc_img_name": {
+    "message": "Original image name"
+  },
+  "macro_desc_att_total": {
+    "message": "Total number of attachments"
+  },
+  "macro_desc_att_number": {
+    "message": "Attachment number without leading zeros"
+  },
+  "macro_desc_att_number_x": {
+    "message": "Attachment number with leading zeros\nReplace X with the desired number of digits"
+  },
+  "macro_desc_att_name": {
+    "message": "Original attachment name"
+  },
+  "macro_desc_year": {
+    "message": "Year"
+  },
+  "macro_desc_year_short": {
+    "message": "Year (short)"
+  },
+  "macro_desc_month": {
+    "message": "Month"
+  },
+  "macro_desc_day": {
+    "message": "Day"
+  },
+  "macro_desc_hour": {
+    "message": "Hour"
+  },
+  "macro_desc_minute": {
+    "message": "Minute"
+  },
+  "alert_first_run": {
+    "message": "kemono-downloader Ver $1:\nThis is the first launch after the version update.\nThe default settings are used.\nPlease check and adjust them if necessary."
+  },
+  "popup_info_text": {
+    "message": "Changing save paths is available on the main settings page."
+  },
+  "button_open_settings": {
+    "message": "Open Settings"
+  },
+  "notify_path_cleaned_title": {
+    "message": "The path has been changed"
+  },
+  "notify_path_cleaned_message": {
+    "message": "Invalid characters removed. Final path: $1"
+  },
+  "help_download_text": {
+    "message": "If <b>enabled</b>, text from the \"<u>Content</u>\" section will be downloaded. All images in this section will be ignored when downloading. All links will be saved as description text."
+  },
+  "help_download_images": {
+    "message": "If <b>enabled</b>, images from the \"<u>Files</u>\" section will be downloaded. Images in the \"<u>Content</u>\" section will not be downloaded."
+  },
+  "help_download_attachments": {
+    "message": "If <b>enabled</b>, attachments from the \"<u>Downloads</u>\" section will be downloaded."
+  },
+  "help_remove_duplicates_by_url": {
+    "message": "If the list of downloaded files (images or attachments) contains several files that are downloaded from the same address, this setting will affect the download: <ul><li><b>Enabled</b> - the file will be downloaded only once;</li><li><b>Disabled</b> - a copy of the file will be downloaded and saved.</li></ul>"
+  },
+  "help_base_path": {
+    "message": "The first, general part of the path where downloaded files will be saved. Depending on the content type, the corresponding part from the fields below will be appended to it, thus forming the full path and file name for saving.<br/>Macros are supported. When downloading files, macros will be replaced with the current values according to their description in the table at the bottom of the page. Only <u>general macros</u> and <u>time macros</u> can be used in this field."
+  },
+  "help_text_path": {
+    "message": "The second part of the path is for saving text. It may optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saving, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u> and <u>time macros</u> can be used for this path."
+  },
+  "help_images_path": {
+    "message": "The second part of the path is for saving images. It may optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saving, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u>, <u>time macros</u>, and <u>image macros</u> can be used for this path."
+  },
+  "help_attachments_path": {
+    "message": "The second part of the path is for saving attachments. It can optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saved, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u>, <u>time macros</u>, and <u>attachment macros</u> can be used for this path."
+  },
+  "help_macro_list": {
+    "message": "To copy a macro, click the icon to the left of it."
+  },
+  "warning_save_problems": {
+    "message": "An invalid macro was detected. The location of the error is currently highlighted in the text. Remove the added <b>[>][<]</b> characters indicating the error and correct the path."
+  },
+  "update_notes_title": {
+    "message": "Update Notes",
+    "description": "Below for Update-notes.html"
+  },
+  "update_notes_description": {
+    "message": "KEMONO DOWNLOADER Update"
+  },
+  "update_notes_what_changed": {
+    "message": "What's Changed?"
+  },
+  "update_notes_previous_version": {
+    "message": "Previous Version"
+  },
+  "update_notes_current_version": {
+    "message": "Current Version"
+  },
+  "update_notes_changes": {
+    "message": "Changes"
+  },
+  "update_notes_new": {
+    "message": "New"
+  },
+  "update_notes_new_title": {
+    "message": "New Feature"
+  },
+  "update_notes_new_desc": {
+    "message": "v1.2.6 : Downloads are now supported on pawchive.st, a site suspiciously similar to Kemono.\n"
+  },
+  "update_notes_imp": {
+    "message": "Improved"
+  },
+  "update_notes_imp_title": {
+    "message": "Improvement"
+  },
+  "update_notes_imp_desc": {
+    "message": "v1.2.6 : No improvements in this version."
+  },
+  "update_notes_fix_title": {
+    "message": "Fixed Bugs"
+  },
+  "update_notes_fix_desc": {
+    "message": "v1.2.6 : No bugs were fixed, but if downloads fail immediately, please click a download link on the pawchive page and check if a human verification page appears. If it does, complete the verification and then use the extension again."
+  },
+  "update_notes_bug_report": {
+    "message": "🐛 Report a Bug"
+  },
+  "update_notes_history_toggle": {
+    "message": "View previous update history"
+  },
+  "update_notes_history_v125": {
+    "message": "v1.2.5 — Auto-retry on download failure"
+  },
+  "update_notes_history_v124": {
+    "message": "v1.2.4 — Update popup notification & update history in settings page"
+  },
+  "update_notes_history_v123": {
+    "message": "v1.2.3 — Download via keyboard shortcut (Ctrl+Shift+F)"
+  }
 }
