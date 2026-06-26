@@ -198,7 +198,7 @@
     "message": "새로운 기능"
   },
   "update_notes_new_desc": {
-    "message": "v1.2.6 : 수상할 정도로 케모노와 유사한 사이트인 pawchive.st 에서의 다운로드도 가능하게 하였습니다..\n"
+    "message": "v1.2.7 : 해당 버전에서는 없습니다."
   },
   "update_notes_imp": {
     "message": "개선된 기능"
@@ -213,13 +213,16 @@
     "message": "수정된 버그"
   },
   "update_notes_fix_desc": {
-    "message": "v1.2.6 : 수정된 버그는 없습니다만, 만약 다운로드가 곧장 실패한다면, pawchive 본문에 있는 다운로드 링크를 눌러 사람인지를 검증하는 페이지가 나오는 지확인해주세요. 만약 나온다면, 사람임을 인증한 후에 다시 확장프로그램을 사용하시면 됩니다."
+    "message": "v1.2.7 : 게시글의 업로드 시각이 올바르지 않은 경우가 있었습니다. 이를 수정하였습니다. 이와는 별개로 다운로드가 곧장 실패한다면, pawchive 본문에 있는 다운로드 링크를 눌러 사람인지를 검증하는 페이지가 나오는 지확인해주세요. 만약 나온다면, 사람임을 인증한 후에 다시 확장프로그램을 사용하시면 됩니다."
   },
   "update_notes_bug_report": {
     "message": "🐛 버그 제보"
   },
   "update_notes_history_toggle": {
     "message": "이전 업데이트 내역 펼치기"
+  },
+  "update_notes_history_v126": {
+    "message": "v1.2.6 — 수상할 정도로 케모노와 유사한 사이트인 pawchive.st 에서의 다운로드도 가능하게 하였습니다."
   },
   "update_notes_history_v125": {
     "message": "v1.2.5 — 다운로드 실패 시 자동 재시도 기능 추가"

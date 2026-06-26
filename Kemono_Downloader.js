@@ -73,7 +73,11 @@ function getDate(num) {
     }
     return replaced[num];
   } catch (error) {
-    replaced = ["0", "0000", "00", "00", "00", "00", "00"]
+    src = document.querySelector(".post__published").textContent;
+    replaced = src.match(/(\d+)-(\d+)-(\d+)\s(\d+):(\d+):(\d+)/);
+    if (replaced == null) {
+      replaced = ["0", "0000", "00", "00", "00", "00", "00"];
+    }
     return replaced[num];
   }
 }
