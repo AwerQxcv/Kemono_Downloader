@@ -198,7 +198,7 @@
     "message": "新機能"
   },
   "update_notes_new_desc": {
-    "message": "v1.2.6 : Kemonoと怪しいほどよく似たサイト、pawchive.st でのダウンロードにも対応しました。\n"
+    "message": "v1.2.7 : このバージョンでの新機能はありません。"
   },
   "update_notes_imp": {
     "message": "改善された機能"
@@ -207,19 +207,22 @@
     "message": "改善された機能"
   },
   "update_notes_imp_desc": {
-    "message": "v1.2.6 : このバージョンでの改善はありません。"
+    "message": "v1.2.7 : このバージョンでの改善はありません。"
   },
   "update_notes_fix_title": {
     "message": "修正されたバグ"
   },
   "update_notes_fix_desc": {
-    "message": "v1.2.6 : 修正されたバグはありませんが、ダウンロードがすぐに失敗する場合は、pawchiveのページ内のダウンロードリンクをクリックして、人間であることを確認するページが表示されるか確認してください。表示された場合は、認証を完了してから再度拡張機能をご使用ください。"
+    "message": "v1.2.7 : 投稿日時のマクロが正しく動作しないことがありました。修正いたしました。なお、それでもダウンロードがすぐに失敗する場合は、pawchive本文中のダウンロードリンクをクリックして、人間であることを確認するページが表示されるか確認してください。表示された場合は、認証を完了してから再度拡張機能をご使用ください。"
   },
   "update_notes_bug_report": {
     "message": "🐛 バグ報告"
   },
   "update_notes_history_toggle": {
     "message": "以前のアップデート履歴を表示"
+  },
+  "update_notes_history_v126": {
+    "message": "v1.2.6 — 不思議なほどKemonoと似ているサイトでもダウンロードできるようにしました。"
   },
   "update_notes_history_v125": {
     "message": "v1.2.5 — ダウンロード失敗時の自動再試行機能を追加"

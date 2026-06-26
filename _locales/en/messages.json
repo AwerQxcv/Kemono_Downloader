@@ -198,28 +198,31 @@
     "message": "New Feature"
   },
   "update_notes_new_desc": {
-    "message": "v1.2.6 : Downloads are now supported on pawchive.st, a site suspiciously similar to Kemono.\n"
+    "message": "v1.2.7 : In this version, there are no new features."
   },
   "update_notes_imp": {
-    "message": "Improved"
+    "message": "Improvement"
   },
   "update_notes_imp_title": {
     "message": "Improvement"
   },
   "update_notes_imp_desc": {
-    "message": "v1.2.6 : No improvements in this version."
+    "message": "v1.2.7 : No improvements in this version."
   },
   "update_notes_fix_title": {
     "message": "Fixed Bugs"
   },
   "update_notes_fix_desc": {
-    "message": "v1.2.6 : No bugs were fixed, but if downloads fail immediately, please click a download link on the pawchive page and check if a human verification page appears. If it does, complete the verification and then use the extension again."
+    "message": "v1.2.7 : The upload time of the post was displayed incorrectly. We have fixed this. Separately, if the download fails immediately, please click the download link in the body of the post on pawchive and check if a page appears to verify that you are human. If it does, please complete the verification and then use the extension again."
   },
   "update_notes_bug_report": {
     "message": "🐛 Report a Bug"
   },
   "update_notes_history_toggle": {
     "message": "View previous update history"
+  },
+  "update_notes_history_v126": {
+    "message": "v1.2.6 — Added support for downloading from pawchive.st, a site suspiciously similar to Kemono."
   },
   "update_notes_history_v125": {
     "message": "v1.2.5 — Auto-retry on download failure"
