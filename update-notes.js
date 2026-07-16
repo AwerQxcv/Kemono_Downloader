@@ -1,10 +1,10 @@
 function localizeHtmlPage() {
-    // data-l11n-id 속성을 가진 모든 요소를 찾습니다.
-    const localizableElements = document.querySelectorAll('[data-l11n-id]');
+    // data-l10n-id 속성을 가진 모든 요소를 찾습니다.
+    const localizableElements = document.querySelectorAll('[data-l10n-id]');
 
     localizableElements.forEach(elem => {
-        // data-l11n-id 속성 값을 가져옵니다 (이것이 messages.json의 key가 됩니다).
-        const messageKey = elem.getAttribute('data-l11n-id');
+        // data-l10n-id 속성 값을 가져옵니다 (이것이 messages.json의 key가 됩니다).
+        const messageKey = elem.getAttribute('data-l10n-id');
         if (messageKey) {
             // chrome.i18n.getMessage API를 사용하여 브라우저 언어에 맞는 텍스트를 가져옵니다.
             const message = browser.i18n.getMessage(messageKey);

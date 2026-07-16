@@ -164,7 +164,7 @@ function collectContent(type) {
   }, []);
 }
 
-function dlText() {
+function dlText(batchId) {
   const container = document.querySelector(".post__content");
   const text = container ? container.innerText.trim() : null
   if (text) {
@@ -173,26 +173,27 @@ function dlText() {
 
     if (isChromium() == true) {
       const blob3 = URL.createObjectURL(blob2);
-      dlFile("download", blob3, filename);
+      dlFile("download", blob3, filename, batchId);
       //URL.revokeObjectURL(blob3)
     } else {
       chrome.runtime.sendMessage({
         type: "blob",
         blob: blob2,
         filename: filename,
+        batchId: batchId,
       });
     }
   }
 }
 
-async function dlContent(type) {
+async function dlContent(type, batchId) {
   const items = collectContent(type);
 
   for (const item of items) {
     try {
       const filename = getSavePathAndName(type, item);
       await new Promise((resolve) => {
-        dlFile("download", item.url, filename);
+        dlFile("download", item.url, filename, batchId);
         setTimeout(resolve, 150);
       });
     } catch (error) {
@@ -244,11 +245,12 @@ function convertMacrosInPath(query) {
   return query.trim();
 }
 
-function dlFile(type, url, filename) {
+function dlFile(type, url, filename, batchId) {
   chrome.runtime.sendMessage({
     type: type,
     url: url,
     filename: filename,
+    batchId: batchId,
   });
 }
 
@@ -267,30 +269,199 @@ async function main(str) {
   globalThis.txtImagesPath = str.txtImagesPath;
   globalThis.txtAttachmentsPath = str.txtAttachmentsPath;
   globalThis.cbRemoveDupByUrl = str.cbRemoveDupByUrl;
+  globalThis.txtNotificationFormat = str.txtNotificationFormat || '$PlatformName$ $UserName$ - $Title$';
+
+  // 배치 ID 생성 (유저ID_페이지ID_타임스탬프)
+  const batchId = `${getUserID()}_${getPageID()}_${Date.now()}`;
+
+  // 배치 시작 알림
+  chrome.runtime.sendMessage({ type: "batch-start", batchId: batchId });
 
   if (str.cbDlText == true) {
-    dlText(); // dlText는 동기적으로 메시지를 보내므로 await 불필요
+    dlText(batchId); // dlText는 동기적으로 메시지를 보내므로 await 불필요
   }
   if (str.cbDlImages == true) {
-    await dlContent('image'); // dlImages의 모든 요청 전송이 끝날 때까지 대기
+    await dlContent('image', batchId); // dlImages의 모든 요청 전송이 끝날 때까지 대기
   }
   if (str.cbDlAttachments == true) {
-    await dlContent('attachment'); // dlAttachments의 모든 요청 전송이 끝날 때까지 대기
+    await dlContent('attachment', batchId); // dlAttachments의 모든 요청 전송이 끝날 때까지 대기
   }
+
+  // 배치 종료 알림 (모든 다운로드 요청 전송 완료)
+  chrome.runtime.sendMessage({ type: "batch-end", batchId: batchId });
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender) {
-  chrome.storage.local.get(
-    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl"],
-    function (str) {
-      if (str.txtBasePath == undefined) {
-        const version = browser.runtime.getManifest().version;
-        const message = browser.i18n.getMessage("alert_first_run", [version]);
-        alert(message);
-        return chrome.runtime.sendMessage({ type: "set" });
-      } else {
-        main(str);
+  // 배치 결과 수신 → 토스트 알림 표시
+  if (request.type === "batch-result") {
+    handleBatchResult(request);
+    return;
+  }
+
+  // 기존 다운로드 트리거 (getImage 메시지)
+  if (request.message === "getImage") {
+    chrome.storage.local.get(
+      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "txtNotificationFormat"],
+      function (str) {
+        if (str.txtBasePath == undefined) {
+          const version = browser.runtime.getManifest().version;
+          const message = browser.i18n.getMessage("alert_first_run", [version]);
+          alert(message);
+          return chrome.runtime.sendMessage({ type: "set" });
+        } else {
+          main(str);
+        }
+      }
+    );
+  }
+});
+
+
+// === 토스트 알림 시스템 ===
+function createToastContainer() {
+  let container = document.getElementById('kd-toast-container');
+  if (container) return container;
+
+  // 스타일 주입
+  const style = document.createElement('style');
+  style.textContent = `
+    #kd-toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2147483647;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 10px;
+      pointer-events: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+    .kd-toast {
+      min-width: 300px;
+      max-width: 420px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 13px;
+      line-height: 1.5;
+      pointer-events: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      animation: kd-slide-in 0.4s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+      cursor: default;
+      overflow: hidden;
+    }
+    .kd-toast.kd-success {
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.93), rgba(28, 120, 50, 0.93));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .kd-toast.kd-warning {
+      background: linear-gradient(135deg, rgba(255, 152, 0, 0.93), rgba(220, 120, 0, 0.93));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .kd-toast.kd-error {
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.93), rgba(170, 40, 52, 0.93));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .kd-toast-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+    .kd-toast-body {
+      opacity: 0.92;
+      font-size: 12.5px;
+      word-break: break-word;
+    }
+    .kd-toast-stats {
+      opacity: 0.75;
+      font-size: 11px;
+      margin-top: 6px;
+    }
+    .kd-toast.kd-fade-out {
+      animation: kd-fade-out 0.5s ease forwards !important;
+    }
+    @keyframes kd-slide-in {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
       }
     }
+    @keyframes kd-fade-out {
+      from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.96);
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  container = document.createElement('div');
+  container.id = 'kd-toast-container';
+  document.body.appendChild(container);
+  return container;
+}
+
+function showToast(title, body, stats, type) {
+  const container = createToastContainer();
+
+  const toast = document.createElement('div');
+  toast.className = `kd-toast kd-${type}`;
+  toast.innerHTML = `
+    <div class="kd-toast-title">${title}</div>
+    <div class="kd-toast-body">${body}</div>
+    <div class="kd-toast-stats">${stats}</div>
+  `;
+
+  // 하단에서 상단으로 올라오는 스택형 (오래된 게 위로)
+  container.appendChild(toast);
+
+  // 5초 후 페이드 아웃
+  setTimeout(() => {
+    toast.classList.add('kd-fade-out');
+    toast.addEventListener('animationend', () => toast.remove());
+  }, 5000);
+}
+
+function handleBatchResult(result) {
+  // 매크로를 적용한 알림 텍스트 생성
+  const notificationText = convertMacrosInPath(
+    globalThis.txtNotificationFormat || '$PlatformName$ $UserName$ - $Title$'
   );
-});
+
+  if (result.failed === 0) {
+    // 모두 성공
+    showToast(
+      '✅ ' + chrome.i18n.getMessage('notify_batch_complete_title'),
+      notificationText,
+      chrome.i18n.getMessage('notify_batch_stats_success', [result.total.toString()]),
+      'success'
+    );
+  } else if (result.success > 0) {
+    // 일부 실패
+    showToast(
+      '⚠️ ' + chrome.i18n.getMessage('notify_batch_partial_fail_title'),
+      notificationText,
+      chrome.i18n.getMessage('notify_batch_stats_partial', [result.success.toString(), result.total.toString(), result.failed.toString()]),
+      'warning'
+    );
+  } else {
+    // 전부 실패
+    showToast(
+      '❌ ' + chrome.i18n.getMessage('notify_batch_partial_fail_title'),
+      notificationText,
+      chrome.i18n.getMessage('notify_batch_stats_partial', [result.success.toString(), result.total.toString(), result.failed.toString()]),
+      'error'
+    );
+  }
+}

@@ -213,7 +213,7 @@
     "message": "Fixed Bugs"
   },
   "update_notes_fix_desc": {
-    "message": "v1.2.7 : The upload time of the post was displayed incorrectly. We have fixed this. Separately, if the download fails immediately, please click the download link in the body of the post on pawchive and check if a page appears to verify that you are human. If it does, please complete the verification and then use the extension again."
+    "message": "v1.2.8 : The upload time of the post was displayed incorrectly. We have fixed this. Separately, if the download fails immediately, please click the download link in the body of the post on pawchive and check if a page appears to verify that you are human. If it does, please complete the verification and then use the extension again."
   },
   "update_notes_bug_report": {
     "message": "🐛 Report a Bug"
@@ -232,5 +232,29 @@
   },
   "update_notes_history_v123": {
     "message": "v1.2.3 — Download via keyboard shortcut (Ctrl+Shift+F)"
+  },
+  "options_retry_count": {
+    "message": "Maximum retry count"
+  },
+  "options_notification_format": {
+    "message": "Notification format"
+  },
+  "help_retry_count": {
+    "message": "Specifies the maximum number of times a failed download will be retried.<br/>Set to <b>0</b> to disable automatic retries."
+  },
+  "help_notification_format": {
+    "message": "Specifies the format of the toast notification that appears when a download batch completes.<br/>Macros are supported. Only <u>general macros</u> and <u>time macros</u> can be used."
+  },
+  "notify_batch_complete_title": {
+    "message": "Download Complete"
+  },
+  "notify_batch_partial_fail_title": {
+    "message": "Download Partially Failed"
+  },
+  "notify_batch_stats_success": {
+    "message": "$1 files"
+  },
+  "notify_batch_stats_partial": {
+    "message": "$1/$2 succeeded, $3 failed"
   }
 }

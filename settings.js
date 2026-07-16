@@ -3,7 +3,9 @@ const PATH_CONFIG = {
   txtBasePath: 'Kemono_Downloader/$PlatformName$/$UserName$/$YY$$MM$$DD$_$Title$',
   txtTextPath: '__main__text__',
   txtImagesPath: '$ImageCounter#3$',
-  txtAttachmentsPath: '$AttName$'
+  txtAttachmentsPath: '$AttName$',
+  numRetryCount: 5,
+  txtNotificationFormat: '$PlatformName$ $UserName$ - $Title$'
 }
 
 // Settings for searching for incorrect macros.
@@ -18,7 +20,8 @@ const MACRO_CONFIG = {
     'txtBasePath': '',
     'txtTextPath': '',
     'txtImagesPath': 'ImageCounter|ImageCounter#\\d+|ImageName',
-    'txtAttachmentsPath': 'AttCounter|AttCounter#\\d+|AttName'
+    'txtAttachmentsPath': 'AttCounter|AttCounter#\\d+|AttName',
+    'txtNotificationFormat': ''
   }
 };
 
@@ -75,6 +78,15 @@ const tooltipRegistry = {
   "lblMacroList": {
     info: "help_macro_list",
     containerClass: "field-header-txt"
+  },
+  "lblRetryCount": {
+    info: "help_retry_count",
+    containerClass: "field-header-txt"
+  },
+  "lblNotificationFormat": {
+    info: "help_notification_format",
+    warning: "warning_save_problems",
+    containerClass: "field-header-txt"
   }
 };
 
@@ -104,6 +116,8 @@ function save_settings() {
   var txtTextPath = document.getElementById("txtTextPath").value;
   var txtImagesPath = document.getElementById("txtImagesPath").value;
   var txtAttachmentsPath = document.getElementById("txtAttachmentsPath").value;
+  var numRetryCount = parseInt(document.getElementById("numRetryCount").value) || 5;
+  var txtNotificationFormat = document.getElementById("txtNotificationFormat").value;
 
   chrome.storage.local.set(
     {
@@ -115,6 +129,8 @@ function save_settings() {
       txtTextPath: txtTextPath,
       txtImagesPath: txtImagesPath,
       txtAttachmentsPath: txtAttachmentsPath,
+      numRetryCount: numRetryCount,
+      txtNotificationFormat: txtNotificationFormat,
     },
     function () {
       console.log("Done: save_settings()");
@@ -124,7 +140,7 @@ function save_settings() {
 
 function load_settings() {
   chrome.storage.local.get(
-    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl"],
+    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "txtNotificationFormat"],
     function (load) {
       document.getElementById("cbDlText").checked = load.cbDlText;
       document.getElementById("cbDlImages").checked = load.cbDlImages;
@@ -134,6 +150,8 @@ function load_settings() {
       document.getElementById("txtTextPath").value = load.txtTextPath;
       document.getElementById("txtImagesPath").value = load.txtImagesPath;
       document.getElementById("txtAttachmentsPath").value = load.txtAttachmentsPath;
+      document.getElementById("numRetryCount").value = load.numRetryCount ?? 5;
+      document.getElementById("txtNotificationFormat").value = load.txtNotificationFormat ?? PATH_CONFIG.txtNotificationFormat;
       if (load.txtBasePath == undefined) {
         initialize_settings();
         console.log("Initializing Settings");
@@ -160,6 +178,8 @@ function initialize_settings() {
   document.getElementById("txtTextPath").value = PATH_CONFIG.txtTextPath;
   document.getElementById("txtImagesPath").value = PATH_CONFIG.txtImagesPath;
   document.getElementById("txtAttachmentsPath").value = PATH_CONFIG.txtAttachmentsPath;
+  document.getElementById("numRetryCount").value = PATH_CONFIG.numRetryCount;
+  document.getElementById("txtNotificationFormat").value = PATH_CONFIG.txtNotificationFormat;
   save_settings();
   // Hide warning icons when the reset to defaults button is pressed.
   for (const [id, config] of Object.entries(tooltipRegistry)) {
@@ -173,6 +193,16 @@ function initialize_settings() {
 document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
   cb.addEventListener('change', (e) => {
     chrome.storage.local.set({ [cb.id]: cb.checked });
+  });
+});
+
+// Number inputs autosave
+document.querySelectorAll('input[type="number"]').forEach(input => {
+  input.addEventListener('change', () => {
+    const val = parseInt(input.value);
+    if (!isNaN(val)) {
+      chrome.storage.local.set({ [input.id]: val });
+    }
   });
 });
 
@@ -353,6 +383,9 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
       const el = document.getElementById(key);
       if (el && el.type === 'checkbox')
         el.checked = newValue;
+      if (el && el.type === 'number') {
+        el.value = newValue;
+      }
     }
   }
 });

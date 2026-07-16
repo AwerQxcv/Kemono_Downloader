@@ -11,7 +11,7 @@ Currently, these languages are supported.
 </ul>
 
 The differences from the original program are as follows:
-・Can useable at kemono.cr and pawchive.st
+・Can useable at kemono.cr and pawchive.
 ・Some features have been added and improved
 
 I would like to express my gratitude to 'tana3n' for providing the original code.

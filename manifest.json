@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Kemono_Downloader",
   "description": "__MSG_manifest_description__",
-  "version": "1.2.7",
+  "version": "1.2.9",
   "default_locale": "en",
   "author": "AwerQxcv",
   "icons": {
@@ -14,7 +14,8 @@
     {
       "matches": [
         "https://kemono.cr/*",
-        "https://pawchive.st/*"
+        "https://pawchive.st/*",
+        "https://pawchive.pw/*"
       ],
       "js": [
         "Kemono_Downloader.js"
@@ -41,7 +42,8 @@
     "contextMenus",
     "notifications",
     "*://kemono.cr/*",
-    "*://pawchive.st/*"
+    "*://pawchive.st/*",
+    "*://pawchive.pw/*"
   ],
   "web_accessible_resources": [
     "icon.svg"

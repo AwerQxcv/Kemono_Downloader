@@ -213,7 +213,7 @@
     "message": "修正されたバグ"
   },
   "update_notes_fix_desc": {
-    "message": "v1.2.7 : 投稿日時のマクロが正しく動作しないことがありました。修正いたしました。なお、それでもダウンロードがすぐに失敗する場合は、pawchive本文中のダウンロードリンクをクリックして、人間であることを確認するページが表示されるか確認してください。表示された場合は、認証を完了してから再度拡張機能をご使用ください。"
+    "message": "v1.2.8 : 投稿日時のマクロが正しく動作しないことがありました。修正いたしました。なお、それでもダウンロードがすぐに失敗する場合は、pawchive本文中のダウンロードリンクをクリックして、人間であることを確認するページが表示されるか確認してください。表示された場合は、認証を完了してから再度拡張機能をご使用ください。"
   },
   "update_notes_bug_report": {
     "message": "🐛 バグ報告"
@@ -232,5 +232,29 @@
   },
   "update_notes_history_v123": {
     "message": "v1.2.3 — ショートカットキー(Ctrl+Shift+F)によるダウンロード機能を追加"
+  },
+  "options_retry_count": {
+    "message": "最大リトライ回数"
+  },
+  "options_notification_format": {
+    "message": "通知表示形式"
+  },
+  "help_retry_count": {
+    "message": "ダウンロード失敗時に自動的にリトライする最大回数を指定します。<br/><b>0</b>に設定すると自動リトライが無効になります。"
+  },
+  "help_notification_format": {
+    "message": "ダウンロードバッチ完了時に表示されるトースト通知の形式を指定します。<br/>マクロを使用できます。<u>一般マクロ</u>と<u>時間マクロ</u>のみ使用できます。"
+  },
+  "notify_batch_complete_title": {
+    "message": "ダウンロード完了"
+  },
+  "notify_batch_partial_fail_title": {
+    "message": "ダウンロード一部失敗"
+  },
+  "notify_batch_stats_success": {
+    "message": "$1個のファイル"
+  },
+  "notify_batch_stats_partial": {
+    "message": "$1/$2 成功、$3個 失敗"
   }
 }

@@ -44,6 +44,10 @@
           <span data-l10n-id="options_remove_duplicates_by_url">Remove duplicates by URL</span>
         </label>
       </div>
+      <div class="input-group">
+        <label id="lblRetryCount" for="numRetryCount" data-l10n-id="options_retry_count">Maximum retry count</label>
+        <input type="number" id="numRetryCount" min="0" max="99" value="5" style="width: 80px;">
+      </div>
     </section>
 
     <!-- 2. 파일명 설정 (Rename Macros) -->
@@ -69,6 +73,10 @@
         <label id="lblAttachmentsPath" for="txtAttachmentsPath" data-l10n-id="options_attachments_path">Rename Macro
           (Attachment)</label>
         <input class="macro" type="text" id="txtAttachmentsPath" placeholder="Enter attachment path macro...">
+      </div>
+      <div class="input-group">
+        <label id="lblNotificationFormat" for="txtNotificationFormat" data-l10n-id="options_notification_format">Notification format</label>
+        <input class="macro" type="text" id="txtNotificationFormat" placeholder="$PlatformName$ $UserName$ - $Title$">
       </div>
     </section>
 
