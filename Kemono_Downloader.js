@@ -164,12 +164,12 @@ function collectContent(type) {
   }, []);
 }
 
-function dlText(batchId) {
+function dlText(batchId, usedNames) {
   const container = document.querySelector(".post__content");
   const text = container ? container.innerText.trim() : null
   if (text) {
     const blob2 = new Blob([text], { type: "text/plain" });
-    filename = convertMacrosInPath(txtBasePath + "/" + txtTextPath) + ".txt";
+    filename = makeUniqueInBatch(convertMacrosInPath(txtBasePath + "/" + txtTextPath) + ".txt", usedNames);
 
     if (isChromium() == true) {
       const blob3 = URL.createObjectURL(blob2);
@@ -186,20 +186,38 @@ function dlText(batchId) {
   }
 }
 
-async function dlContent(type, batchId) {
+async function dlContent(type, batchId, usedNames) {
   const items = collectContent(type);
 
   for (const item of items) {
     try {
-      const filename = getSavePathAndName(type, item);
+      const filename = makeUniqueInBatch(getSavePathAndName(type, item), usedNames);
       await new Promise((resolve) => {
         dlFile("download", item.url, filename, batchId);
-        setTimeout(resolve, 150);
+        setTimeout(resolve, numDownloadDelay);
       });
     } catch (error) {
       console.error(`dlContent (${type}): Error processing item ${item.index}:`, error);
     }
   }
+}
+
+// 한 게시글 안에서 서로 다른 파일이 같은 경로가 되면 " (2)", " (3)"…을 붙여 구분.
+// 덮어쓰기 모드에서 서로 덮어쓰지 않게 하고, 다시 받아도 항상 같은 이름이 나오게 함.
+// usedNames: 이번 배치에서 이미 쓴 경로 (Windows는 대소문자를 구분하지 않으므로 소문자로 저장)
+function makeUniqueInBatch(filename, usedNames) {
+  const slashIdx = filename.lastIndexOf('/');
+  const dotIdx = filename.lastIndexOf('.');
+  const hasExt = dotIdx > slashIdx + 1;
+  const stem = hasExt ? filename.substring(0, dotIdx) : filename;
+  const ext = hasExt ? filename.substring(dotIdx) : '';
+
+  let candidate = filename;
+  for (let n = 2; usedNames.has(candidate.toLowerCase()); n++) {
+    candidate = `${stem} (${n})${ext}`;
+  }
+  usedNames.add(candidate.toLowerCase());
+  return candidate;
 }
 
 function getSavePathAndName(type, item) {
@@ -269,26 +287,35 @@ async function main(str) {
   globalThis.txtImagesPath = str.txtImagesPath;
   globalThis.txtAttachmentsPath = str.txtAttachmentsPath;
   globalThis.cbRemoveDupByUrl = str.cbRemoveDupByUrl;
-  globalThis.txtNotificationFormat = str.txtNotificationFormat || '$PlatformName$ $UserName$ - $Title$';
+  const delay = parseInt(str.numDownloadDelay);
+  globalThis.numDownloadDelay = isNaN(delay) || delay < 0 ? 150 : delay; // 파일 간 다운로드 지연 시간 (ms)
 
   // 배치 ID 생성 (유저ID_페이지ID_타임스탬프)
   const batchId = `${getUserID()}_${getPageID()}_${Date.now()}`;
 
+  // 알림 문구는 지금(게시글 페이지에 있는 시점) 미리 만들어 둠.
+  // 완료 시점에는 사용자가 다른 페이지로 이동했을 수 있어 그때 매크로를 변환하면 실패하거나 엉뚱한 제목이 나옴
+  const notificationText = convertMacrosInPath(str.txtNotificationFormat || '$PlatformName$ $UserName$ - $Title$');
+
   // 배치 시작 알림
-  chrome.runtime.sendMessage({ type: "batch-start", batchId: batchId });
+  chrome.runtime.sendMessage({ type: "batch-start", batchId: batchId, notificationText: notificationText });
 
-  if (str.cbDlText == true) {
-    dlText(batchId); // dlText는 동기적으로 메시지를 보내므로 await 불필요
-  }
-  if (str.cbDlImages == true) {
-    await dlContent('image', batchId); // dlImages의 모든 요청 전송이 끝날 때까지 대기
-  }
-  if (str.cbDlAttachments == true) {
-    await dlContent('attachment', batchId); // dlAttachments의 모든 요청 전송이 끝날 때까지 대기
-  }
+  const usedNames = new Set(); // 이번 배치에서 이미 쓴 파일 경로 (makeUniqueInBatch 참고)
 
-  // 배치 종료 알림 (모든 다운로드 요청 전송 완료)
-  chrome.runtime.sendMessage({ type: "batch-end", batchId: batchId });
+  try {
+    if (str.cbDlText == true) {
+      dlText(batchId, usedNames); // dlText는 동기적으로 메시지를 보내므로 await 불필요
+    }
+    if (str.cbDlImages == true) {
+      await dlContent('image', batchId, usedNames); // dlImages의 모든 요청 전송이 끝날 때까지 대기
+    }
+    if (str.cbDlAttachments == true) {
+      await dlContent('attachment', batchId, usedNames); // dlAttachments의 모든 요청 전송이 끝날 때까지 대기
+    }
+  } finally {
+    // 배치 종료 알림 (모든 다운로드 요청 전송 완료). 도중에 오류가 나도 보내야 결과 알림이 뜸
+    chrome.runtime.sendMessage({ type: "batch-end", batchId: batchId });
+  }
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender) {
@@ -301,7 +328,7 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
   // 기존 다운로드 트리거 (getImage 메시지)
   if (request.message === "getImage") {
     chrome.storage.local.get(
-      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "txtNotificationFormat"],
+      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numDownloadDelay", "txtNotificationFormat"],
       function (str) {
         if (str.txtBasePath == undefined) {
           const version = browser.runtime.getManifest().version;
@@ -417,29 +444,51 @@ function showToast(title, body, stats, type) {
 
   const toast = document.createElement('div');
   toast.className = `kd-toast kd-${type}`;
-  toast.innerHTML = `
-    <div class="kd-toast-title">${title}</div>
-    <div class="kd-toast-body">${body}</div>
-    <div class="kd-toast-stats">${stats}</div>
-  `;
+  // 게시글 제목 등이 HTML로 해석되지 않도록 textContent로 삽입 (빈 줄은 생략)
+  for (const [className, text] of [['kd-toast-title', title], ['kd-toast-body', body], ['kd-toast-stats', stats]]) {
+    if (!text) continue;
+    const line = document.createElement('div');
+    line.className = className;
+    line.textContent = text;
+    toast.appendChild(line);
+  }
 
   // 하단에서 상단으로 올라오는 스택형 (오래된 게 위로)
   container.appendChild(toast);
 
   // 5초 후 페이드 아웃
-  setTimeout(() => {
+  const scheduleFadeOut = () => setTimeout(() => {
     toast.classList.add('kd-fade-out');
-    toast.addEventListener('animationend', () => toast.remove());
+    toast.addEventListener('animationend', (e) => {
+      if (e.animationName === 'kd-fade-out') toast.remove();
+    });
   }, 5000);
+
+  // 다른 탭을 보고 있는 동안 완료되면 보지도 못하고 사라지므로, 탭으로 돌아온 뒤부터 5초를 셈
+  if (document.hidden) {
+    document.addEventListener('visibilitychange', function onVisible() {
+      if (document.hidden) return;
+      document.removeEventListener('visibilitychange', onVisible);
+      scheduleFadeOut();
+    });
+  } else {
+    scheduleFadeOut();
+  }
 }
 
 function handleBatchResult(result) {
-  // 매크로를 적용한 알림 텍스트 생성
-  const notificationText = convertMacrosInPath(
-    globalThis.txtNotificationFormat || '$PlatformName$ $UserName$ - $Title$'
-  );
+  // 다운로드 시작 시점에 만들어 둔 알림 문구 사용 (main 참고)
+  const notificationText = result.notificationText || '';
 
-  if (result.failed === 0) {
+  if (result.total === 0) {
+    // 다운로드할 파일 없음
+    showToast(
+      'ℹ️ ' + chrome.i18n.getMessage('notify_batch_empty_title'),
+      notificationText,
+      '',
+      'warning'
+    );
+  } else if (result.failed === 0) {
     // 모두 성공
     showToast(
       '✅ ' + chrome.i18n.getMessage('notify_batch_complete_title'),
@@ -458,7 +507,7 @@ function handleBatchResult(result) {
   } else {
     // 전부 실패
     showToast(
-      '❌ ' + chrome.i18n.getMessage('notify_batch_partial_fail_title'),
+      '❌ ' + chrome.i18n.getMessage('notify_batch_failed_title'),
       notificationText,
       chrome.i18n.getMessage('notify_batch_stats_partial', [result.success.toString(), result.total.toString(), result.failed.toString()]),
       'error'

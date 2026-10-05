@@ -48,6 +48,17 @@
         <label id="lblRetryCount" for="numRetryCount" data-l10n-id="options_retry_count">Maximum retry count</label>
         <input type="number" id="numRetryCount" min="0" max="99" value="5" style="width: 80px;">
       </div>
+      <div class="input-group">
+        <label id="lblDownloadDelay" for="numDownloadDelay" data-l10n-id="options_download_delay">Delay between downloads (ms)</label>
+        <input type="number" id="numDownloadDelay" min="0" max="60000" step="50" value="150" style="width: 80px;">
+      </div>
+      <div class="input-group">
+        <label id="lblConflictAction" for="selConflictAction" data-l10n-id="options_conflict_action">If a file with the same name already exists</label>
+        <select id="selConflictAction">
+          <option value="uniquify" data-l10n-id="options_conflict_uniquify">Save with a new name (e.g. 001(1).jpg)</option>
+          <option value="overwrite" data-l10n-id="options_conflict_overwrite">Overwrite the existing file</option>
+        </select>
+      </div>
     </section>
 
     <!-- 2. 파일명 설정 (Rename Macros) -->

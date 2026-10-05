@@ -242,6 +242,24 @@
   "help_retry_count": {
     "message": "ダウンロード失敗時に自動的にリトライする最大回数を指定します。<br/><b>0</b>に設定すると自動リトライが無効になります。"
   },
+  "options_download_delay": {
+    "message": "ダウンロード間の待機時間 (ms)"
+  },
+  "help_download_delay": {
+    "message": "ファイルのダウンロードを開始してから次のファイルのダウンロードを開始するまでの待機時間をミリ秒単位で指定します。<br/>リクエスト過多でダウンロードが失敗する場合は、この値を大きくしてください。デフォルト: <b>150</b>。"
+  },
+  "options_conflict_action": {
+    "message": "同じ名前のファイルが既にある場合"
+  },
+  "options_conflict_uniquify": {
+    "message": "別名で保存 (例: 001(1).jpg)"
+  },
+  "options_conflict_overwrite": {
+    "message": "既存のファイルを上書き"
+  },
+  "help_conflict_action": {
+    "message": "同じ投稿を再ダウンロードした場合など、保存先に同じ名前のファイルが既にあるときの動作を指定します。<br/><b>上書き</b>を選ぶと <i>001(1).jpg</i> のようなファイルは作成されません。<br/>その場合、ファイル名マクロが投稿ごとに異なるパスになるよう設定してください (例: タイトルやページIDのマクロを含める)。そうでないと、別の投稿のファイル同士が上書きされる可能性があります。"
+  },
   "help_notification_format": {
     "message": "ダウンロードバッチ完了時に表示されるトースト通知の形式を指定します。<br/>マクロを使用できます。<u>一般マクロ</u>と<u>時間マクロ</u>のみ使用できます。"
   },
@@ -250,6 +268,12 @@
   },
   "notify_batch_partial_fail_title": {
     "message": "ダウンロード一部失敗"
+  },
+  "notify_batch_failed_title": {
+    "message": "ダウンロード失敗"
+  },
+  "notify_batch_empty_title": {
+    "message": "ダウンロードするファイルがありません"
   },
   "notify_batch_stats_success": {
     "message": "$1個のファイル"

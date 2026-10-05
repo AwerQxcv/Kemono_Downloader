@@ -5,6 +5,8 @@ const PATH_CONFIG = {
   txtImagesPath: '$ImageCounter#3$',
   txtAttachmentsPath: '$AttName$',
   numRetryCount: 5,
+  numDownloadDelay: 150,
+  selConflictAction: 'uniquify',
   txtNotificationFormat: '$PlatformName$ $UserName$ - $Title$'
 }
 
@@ -83,6 +85,14 @@ const tooltipRegistry = {
     info: "help_retry_count",
     containerClass: "field-header-txt"
   },
+  "lblDownloadDelay": {
+    info: "help_download_delay",
+    containerClass: "field-header-txt"
+  },
+  "lblConflictAction": {
+    info: "help_conflict_action",
+    containerClass: "field-header-txt"
+  },
   "lblNotificationFormat": {
     info: "help_notification_format",
     warning: "warning_save_problems",
@@ -116,7 +126,11 @@ function save_settings() {
   var txtTextPath = document.getElementById("txtTextPath").value;
   var txtImagesPath = document.getElementById("txtImagesPath").value;
   var txtAttachmentsPath = document.getElementById("txtAttachmentsPath").value;
-  var numRetryCount = parseInt(document.getElementById("numRetryCount").value) || 5;
+  var numRetryCount = parseInt(document.getElementById("numRetryCount").value);
+  if (isNaN(numRetryCount) || numRetryCount < 0) numRetryCount = PATH_CONFIG.numRetryCount;
+  var numDownloadDelay = parseInt(document.getElementById("numDownloadDelay").value);
+  if (isNaN(numDownloadDelay) || numDownloadDelay < 0) numDownloadDelay = PATH_CONFIG.numDownloadDelay;
+  var selConflictAction = document.getElementById("selConflictAction").value;
   var txtNotificationFormat = document.getElementById("txtNotificationFormat").value;
 
   chrome.storage.local.set(
@@ -130,6 +144,8 @@ function save_settings() {
       txtImagesPath: txtImagesPath,
       txtAttachmentsPath: txtAttachmentsPath,
       numRetryCount: numRetryCount,
+      numDownloadDelay: numDownloadDelay,
+      selConflictAction: selConflictAction,
       txtNotificationFormat: txtNotificationFormat,
     },
     function () {
@@ -140,7 +156,7 @@ function save_settings() {
 
 function load_settings() {
   chrome.storage.local.get(
-    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "txtNotificationFormat"],
+    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "numDownloadDelay", "selConflictAction", "txtNotificationFormat"],
     function (load) {
       document.getElementById("cbDlText").checked = load.cbDlText;
       document.getElementById("cbDlImages").checked = load.cbDlImages;
@@ -150,7 +166,9 @@ function load_settings() {
       document.getElementById("txtTextPath").value = load.txtTextPath;
       document.getElementById("txtImagesPath").value = load.txtImagesPath;
       document.getElementById("txtAttachmentsPath").value = load.txtAttachmentsPath;
-      document.getElementById("numRetryCount").value = load.numRetryCount ?? 5;
+      document.getElementById("numRetryCount").value = load.numRetryCount ?? PATH_CONFIG.numRetryCount;
+      document.getElementById("numDownloadDelay").value = load.numDownloadDelay ?? PATH_CONFIG.numDownloadDelay;
+      document.getElementById("selConflictAction").value = load.selConflictAction ?? PATH_CONFIG.selConflictAction;
       document.getElementById("txtNotificationFormat").value = load.txtNotificationFormat ?? PATH_CONFIG.txtNotificationFormat;
       if (load.txtBasePath == undefined) {
         initialize_settings();
@@ -179,6 +197,8 @@ function initialize_settings() {
   document.getElementById("txtImagesPath").value = PATH_CONFIG.txtImagesPath;
   document.getElementById("txtAttachmentsPath").value = PATH_CONFIG.txtAttachmentsPath;
   document.getElementById("numRetryCount").value = PATH_CONFIG.numRetryCount;
+  document.getElementById("numDownloadDelay").value = PATH_CONFIG.numDownloadDelay;
+  document.getElementById("selConflictAction").value = PATH_CONFIG.selConflictAction;
   document.getElementById("txtNotificationFormat").value = PATH_CONFIG.txtNotificationFormat;
   save_settings();
   // Hide warning icons when the reset to defaults button is pressed.
@@ -203,6 +223,13 @@ document.querySelectorAll('input[type="number"]').forEach(input => {
     if (!isNaN(val)) {
       chrome.storage.local.set({ [input.id]: val });
     }
+  });
+});
+
+// Select boxes autosave
+document.querySelectorAll('select').forEach(sel => {
+  sel.addEventListener('change', () => {
+    chrome.storage.local.set({ [sel.id]: sel.value });
   });
 });
 
@@ -384,6 +411,9 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
       if (el && el.type === 'checkbox')
         el.checked = newValue;
       if (el && el.type === 'number') {
+        el.value = newValue;
+      }
+      if (el && el.tagName === 'SELECT' && newValue !== undefined) {
         el.value = newValue;
       }
     }

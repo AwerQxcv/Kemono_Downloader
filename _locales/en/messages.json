@@ -242,6 +242,24 @@
   "help_retry_count": {
     "message": "Specifies the maximum number of times a failed download will be retried.<br/>Set to <b>0</b> to disable automatic retries."
   },
+  "options_download_delay": {
+    "message": "Delay between downloads (ms)"
+  },
+  "help_download_delay": {
+    "message": "Specifies the wait time in milliseconds between starting one file download and the next.<br/>Increase this value if downloads fail due to too many requests. Default: <b>150</b>."
+  },
+  "options_conflict_action": {
+    "message": "If a file with the same name already exists"
+  },
+  "options_conflict_uniquify": {
+    "message": "Save with a new name (e.g. 001(1).jpg)"
+  },
+  "options_conflict_overwrite": {
+    "message": "Overwrite the existing file"
+  },
+  "help_conflict_action": {
+    "message": "Specifies what happens when a file with the same name already exists in the save folder, for example when you download the same post again.<br/><b>Overwrite</b> prevents files like <i>001(1).jpg</i> from being created.<br/>When using it, make sure your rename macros produce a different path for each post (e.g. include the title or page ID macro). Otherwise files from different posts may overwrite each other."
+  },
   "help_notification_format": {
     "message": "Specifies the format of the toast notification that appears when a download batch completes.<br/>Macros are supported. Only <u>general macros</u> and <u>time macros</u> can be used."
   },
@@ -250,6 +268,12 @@
   },
   "notify_batch_partial_fail_title": {
     "message": "Download Partially Failed"
+  },
+  "notify_batch_failed_title": {
+    "message": "Download Failed"
+  },
+  "notify_batch_empty_title": {
+    "message": "No files to download"
   },
   "notify_batch_stats_success": {
     "message": "$1 files"

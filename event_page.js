@@ -3,24 +3,42 @@ const DEFAULT_MAX_RETRY = 5;
 const RETRY_DELAY = 3000; // 3초
 
 let maxRetry = DEFAULT_MAX_RETRY;
+// 같은 이름의 파일이 있을 때 동작 ("uniquify": 001(1).jpg 처럼 새 이름, "overwrite": 덮어쓰기)
+const DEFAULT_CONFLICT_ACTION = 'uniquify';
+let conflictAction = DEFAULT_CONFLICT_ACTION;
 
-// storage에서 재시도 횟수 로드
-chrome.storage.local.get(['numRetryCount'], (data) => {
+// 0은 "재시도 안 함"을 뜻하는 유효한 값이므로 || 대신 NaN/음수일 때만 기본값 사용
+function parseRetryCount(value) {
+  const n = parseInt(value);
+  return isNaN(n) || n < 0 ? DEFAULT_MAX_RETRY : n;
+}
+
+function parseConflictAction(value) {
+  return value === 'overwrite' || value === 'uniquify' ? value : DEFAULT_CONFLICT_ACTION;
+}
+
+// storage에서 재시도 횟수 / 중복 파일 처리 방식 로드
+chrome.storage.local.get(['numRetryCount', 'selConflictAction'], (data) => {
   if (data.numRetryCount !== undefined) {
-    maxRetry = parseInt(data.numRetryCount) || DEFAULT_MAX_RETRY;
+    maxRetry = parseRetryCount(data.numRetryCount);
   }
+  conflictAction = parseConflictAction(data.selConflictAction);
 });
 
-// storage 변경 시 재시도 횟수 동기화
+// storage 변경 시 동기화
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'local' && changes.numRetryCount) {
-    maxRetry = parseInt(changes.numRetryCount.newValue) || DEFAULT_MAX_RETRY;
+  if (areaName !== 'local') return;
+  if (changes.numRetryCount) {
+    maxRetry = parseRetryCount(changes.numRetryCount.newValue);
+  }
+  if (changes.selConflictAction) {
+    conflictAction = parseConflictAction(changes.selConflictAction.newValue);
   }
 });
 
 
 // === 배치 추적 시스템 ===
-// batchId → { tabId, dispatched, items: [ { url, filename, status, error, retryCount, downloadId } ] }
+// batchId → { tabId, dispatched, notificationText, items: [ { url, filename, status, error, retryCount, downloadId } ] }
 const batchMap = new Map();
 // downloadId → { batchId, itemIndex }
 const downloadToBatchMap = new Map();
@@ -76,6 +94,7 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
     batchMap.set(request.batchId, {
       tabId: tabId,
       dispatched: false,
+      notificationText: request.notificationText || '',
       items: []
     });
 
@@ -108,45 +127,40 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
 
 // === 다운로드 실행 및 배치 추적 ===
 async function downloadAndTrack(url, filename, batchId) {
+  // download()는 비동기라 batch-end가 먼저 도착할 수 있으므로, await 전에 동기적으로 배치에 등록
+  // (나중에 등록하면 완료 검사에서 누락되어 "0개 파일 완료" 같은 잘못된 알림이 뜸)
+  const batch = batchId ? batchMap.get(batchId) : undefined;
+  const item = {
+    url: url,
+    filename: filename,
+    status: 'pending',
+    error: null,
+    retryCount: 0,
+    downloadId: null
+  };
+  const itemIndex = batch ? batch.items.push(item) - 1 : -1;
+
   try {
     const downloadId = await browser.downloads.download({
       url: url,
       filename: filename,
       saveAs: false,
+      conflictAction: conflictAction,
     });
 
-    if (batchId) {
-      const batch = batchMap.get(batchId);
-      if (batch) {
-        const itemIndex = batch.items.length;
-        batch.items.push({
-          url: url,
-          filename: filename,
-          status: 'in_progress',
-          error: null,
-          retryCount: 0,
-          downloadId: downloadId
-        });
-        downloadToBatchMap.set(downloadId, { batchId, itemIndex });
-      }
+    if (batch) {
+      item.downloadId = downloadId;
+      item.status = 'in_progress';
+      downloadToBatchMap.set(downloadId, { batchId, itemIndex });
     }
   } catch (error) {
     console.error('Download start failed:', error);
 
     // 다운로드 시작 자체가 실패한 경우에도 배치에 기록
-    if (batchId) {
-      const batch = batchMap.get(batchId);
-      if (batch) {
-        batch.items.push({
-          url: url,
-          filename: filename,
-          status: 'failed',
-          error: 'DOWNLOAD_START_FAILED',
-          retryCount: 0,
-          downloadId: null
-        });
-        checkBatchCompletion(batchId);
-      }
+    if (batch) {
+      item.status = 'failed';
+      item.error = 'DOWNLOAD_START_FAILED';
+      checkBatchCompletion(batchId);
     }
   }
 }
@@ -201,6 +215,7 @@ chrome.downloads.onChanged.addListener((delta) => {
             url: item.url,
             filename: item.filename,
             saveAs: false,
+            conflictAction: conflictAction,
           });
 
           // 새 downloadId로 매핑 갱신
@@ -253,13 +268,14 @@ function checkBatchCompletion(batchId) {
       total: total,
       success: success,
       failed: failed,
-      failedItems: failedItems
+      failedItems: failedItems,
+      notificationText: batch.notificationText
     }).catch(() => {
       // 탭이 닫혀있을 경우 OS 알림으로 대체
-      showOSNotification(total, success, failed);
+      showOSNotification(total, success, failed, batch.notificationText);
     });
   } else {
-    showOSNotification(total, success, failed);
+    showOSNotification(total, success, failed, batch.notificationText);
   }
 
   // 배치 정리 (메모리 해제)
@@ -268,24 +284,29 @@ function checkBatchCompletion(batchId) {
 
 
 // === OS 알림 (탭이 닫혀있을 경우 대체) ===
-function showOSNotification(total, success, failed) {
+function showOSNotification(total, success, failed, notificationText) {
   if (typeof browser === 'undefined' || !browser.notifications) return;
 
-  if (failed > 0) {
-    browser.notifications.create({
-      type: "basic",
-      iconUrl: "icon_48.png",
-      title: chrome.i18n.getMessage("notify_batch_partial_fail_title"),
-      message: chrome.i18n.getMessage("notify_batch_stats_partial", [success.toString(), total.toString(), failed.toString()])
-    });
+  let title, stats;
+  if (total === 0) {
+    title = chrome.i18n.getMessage("notify_batch_empty_title");
+    stats = '';
+  } else if (failed === 0) {
+    title = chrome.i18n.getMessage("notify_batch_complete_title");
+    stats = chrome.i18n.getMessage("notify_batch_stats_success", [total.toString()]);
   } else {
-    browser.notifications.create({
-      type: "basic",
-      iconUrl: "icon_48.png",
-      title: chrome.i18n.getMessage("notify_batch_complete_title"),
-      message: chrome.i18n.getMessage("notify_batch_stats_success", [total.toString()])
-    });
+    // 전부 실패했으면 "일부 실패"가 아닌 "실패" 제목 사용
+    title = chrome.i18n.getMessage(success > 0 ? "notify_batch_partial_fail_title" : "notify_batch_failed_title");
+    stats = chrome.i18n.getMessage("notify_batch_stats_partial", [success.toString(), total.toString(), failed.toString()]);
   }
+
+  // 어느 게시글의 결과인지 알 수 있도록 알림 문구를 함께 표시
+  browser.notifications.create({
+    type: "basic",
+    iconUrl: "icon_48.png",
+    title: title,
+    message: [notificationText, stats].filter(Boolean).join("\n")
+  });
 }
 
 
