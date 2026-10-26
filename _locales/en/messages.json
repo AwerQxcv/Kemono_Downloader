@@ -286,5 +286,35 @@
   },
   "notify_post_fetch_failed_title": {
     "message": "Failed to load post information"
+  },
+  "button_cancel": {
+    "message": "Cancel"
+  },
+  "confirm_creator_download": {
+    "message": "Download all $1 posts from this creator?"
+  },
+  "notify_creator_loading": {
+    "message": "Loading the creator's post list…"
+  },
+  "notify_creator_no_posts": {
+    "message": "This creator has no posts"
+  },
+  "notify_creator_progress": {
+    "message": "Downloading post $1/$2"
+  },
+  "notify_creator_waiting": {
+    "message": "Waiting for downloads to finish…"
+  },
+  "notify_creator_complete_title": {
+    "message": "Creator Download Complete"
+  },
+  "notify_creator_cancelled_title": {
+    "message": "Creator Download Cancelled"
+  },
+  "notify_creator_stats": {
+    "message": "$1 posts, $2/$3 files succeeded"
+  },
+  "notify_creator_fetch_failed": {
+    "message": "$1 posts could not be loaded"
   }
 }
