@@ -280,5 +280,11 @@
   },
   "notify_batch_stats_partial": {
     "message": "$1/$2 成功、$3個 失敗"
+  },
+  "notify_post_not_found_title": {
+    "message": "投稿が見つかりません"
+  },
+  "notify_post_fetch_failed_title": {
+    "message": "投稿情報の取得に失敗しました"
   }
 }
