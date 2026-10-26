@@ -286,5 +286,35 @@
   },
   "notify_post_fetch_failed_title": {
     "message": "게시글 정보를 불러오지 못했습니다"
+  },
+  "button_cancel": {
+    "message": "취소"
+  },
+  "confirm_creator_download": {
+    "message": "이 작가의 게시글 $1개를 모두 다운로드할까요?"
+  },
+  "notify_creator_loading": {
+    "message": "작가의 게시글 목록을 불러오는 중…"
+  },
+  "notify_creator_no_posts": {
+    "message": "이 작가의 게시글이 없습니다"
+  },
+  "notify_creator_progress": {
+    "message": "게시글 다운로드 중 $1/$2"
+  },
+  "notify_creator_waiting": {
+    "message": "다운로드가 끝나기를 기다리는 중…"
+  },
+  "notify_creator_complete_title": {
+    "message": "작가 다운로드 완료"
+  },
+  "notify_creator_cancelled_title": {
+    "message": "작가 다운로드 취소됨"
+  },
+  "notify_creator_stats": {
+    "message": "게시글 $1개, 파일 $2/$3 성공"
+  },
+  "notify_creator_fetch_failed": {
+    "message": "게시글 $1개를 불러오지 못했습니다"
   }
 }

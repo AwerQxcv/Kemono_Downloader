@@ -51,9 +51,9 @@ chrome.contextMenus.create({
   type: "normal",
   contexts: ["page"],
   documentUrlPatterns: [
-    "https://kemono.cr/*/post/*",
-    "https://pawchive.st/*/post/*",
-    "https://pawchive.pw/*/post/*"
+    "https://kemono.cr/*/user/*",
+    "https://pawchive.st/*/user/*",
+    "https://pawchive.pw/*/user/*"
   ]
 });
 
