@@ -280,5 +280,11 @@
   },
   "notify_batch_stats_partial": {
     "message": "$1/$2 успешно, $3 не удалось"
+  },
+  "notify_post_not_found_title": {
+    "message": "Пост не найден"
+  },
+  "notify_post_fetch_failed_title": {
+    "message": "Не удалось загрузить информацию о посте"
   }
 }

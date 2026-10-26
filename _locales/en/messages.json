@@ -280,5 +280,11 @@
   },
   "notify_batch_stats_partial": {
     "message": "$1/$2 succeeded, $3 failed"
+  },
+  "notify_post_not_found_title": {
+    "message": "Post not found"
+  },
+  "notify_post_fetch_failed_title": {
+    "message": "Failed to load post information"
   }
 }

@@ -1,13 +1,130 @@
+// === 게시글 API ===
+// kemono / pawchive 모두 /api/v1/{service}/user/{user}/post/{id} 구조를 사용.
+// HTML 파싱 대신 이 API로 게시글 정보를 받아와 globalThis.postData에 저장해 두고, 아래 매크로/다운로드 함수들이 이것을 사용함.
+
+// 이미지(본문 이미지)로 취급할 확장자. 사이트 프론트엔드도 확장자로 이미지/첨부파일을 나눔
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.jpe', '.jfif', '.png', '.gif', '.webp', '.avif', '.bmp']);
+
+// 서비스 ID → 사이트에 표시되는 플랫폼 이름 ($PlatformName$ 매크로가 기존 HTML 파싱 결과와 같도록)
+const PLATFORM_NAMES = {
+  patreon: 'Patreon',
+  fanbox: 'Pixiv Fanbox',
+  fantia: 'Fantia',
+  gumroad: 'Gumroad',
+  subscribestar: 'SubscribeStar',
+  dlsite: 'DLsite',
+  discord: 'Discord',
+  boosty: 'Boosty',
+  afdian: 'Afdian',
+  onlyfans: 'OnlyFans',
+  fansly: 'Fansly',
+  candfans: 'CandFans',
+};
+
+class PostNotFoundError extends Error { }
+
+// kemono API는 Accept: text/css 가 아니면 403을 주는 경우가 있어 먼저 text/css로 시도하고, 실패하면 일반 Accept로 재시도
+async function apiGet(path) {
+  let response;
+  for (const accept of ['text/css', '*/*']) {
+    response = await fetch(location.origin + '/api/v1' + path, { headers: { 'Accept': accept }, credentials: 'include' });
+    if (response.ok || response.status === 404) break;
+  }
+  if (response.status === 404) throw new PostNotFoundError(path);
+  if (!response.ok) throw new Error(`API ${path} : HTTP ${response.status}`);
+  return JSON.parse(await response.text()); // Content-Type이 text/css로 올 수 있어 response.json() 대신 직접 파싱
+}
+
+async function fetchPostData() {
+  const service = getService();
+  const userID = getUserID();
+  const pageID = getPageID();
+
+  const data = await apiGet(`/${service}/user/${userID}/post/${pageID}`);
+  // 평평한 게시글 JSON과 { post, attachments, previews, videos } 형태 둘 다 지원
+  const post = data && data.post ? data.post : data;
+  if (!post || !post.id) throw new PostNotFoundError(pageID);
+
+  const { images, attachments } = classifyFiles(post);
+
+  return {
+    service: service,
+    userName: await fetchUserName(service, userID),
+    title: decodeHtmlEntities(post.title || ''),
+    content: post.content || '',
+    published: post.published || post.added || '',
+    images: images,
+    attachments: attachments,
+  };
+}
+
+// 유저 이름은 게시글 API에 없으므로 프로필 API에서 가져옴. 실패하면 페이지에서 읽고, 그것도 안 되면 유저 ID 사용
+async function fetchUserName(service, userID) {
+  try {
+    const profile = await apiGet(`/${service}/user/${userID}/profile`);
+    if (profile && profile.name) return decodeHtmlEntities(profile.name);
+  } catch (error) {
+    console.warn('fetchUserName: profile API failed', error);
+  }
+  const link = document.querySelector("a.post__user-name");
+  return link ? link.textContent : userID;
+}
+
+// file + attachments를 확장자로 이미지 / 첨부파일로 분류
+// file(썸네일)이 attachments에 같은 path로 또 들어있는 경우가 있어 그때는 file을 제외 (사이트 화면과 동일)
+// 그 밖의 중복은 기존처럼 cbRemoveDupByUrl 설정에 따라 collectContent에서 처리
+function classifyFiles(post) {
+  const attachmentList = (Array.isArray(post.attachments) ? post.attachments : []).filter((file) => file && file.path);
+  const files = [...attachmentList];
+  if (post.file && post.file.path && !attachmentList.some((file) => file.path === post.file.path)) {
+    files.unshift(post.file);
+  }
+
+  const images = [];
+  const attachments = [];
+  for (const file of files) {
+    const name = decodeHtmlEntities(file.name || '');
+    const entry = {
+      url: location.origin + '/data' + file.path,
+      name: name,
+    };
+    (IMAGE_EXTENSIONS.has(getExtension(name || file.path)) ? images : attachments).push(entry);
+  }
+  return { images, attachments };
+}
+
+function getExtension(fileName) {
+  const dotIdx = fileName.lastIndexOf('.');
+  return dotIdx > 0 ? fileName.substring(dotIdx).toLowerCase() : '';
+}
+
+// API의 title / name / content에는 &amp; 같은 HTML 엔티티가 그대로 들어있어 디코딩이 필요
+function decodeHtmlEntities(text) {
+  if (!text) return '';
+  return new DOMParser().parseFromString(text, 'text/html').documentElement.textContent;
+}
+
+// 본문 HTML → 텍스트. 분리된 문서에서는 innerText가 줄바꿈을 만들지 않아 직접 처리
+function htmlToText(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+  doc.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, blockquote, pre, tr').forEach((el) => el.append('\n'));
+  return doc.body.textContent.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 // Functions for general macros
 function getPlatformName() {
-  let platformName = document.querySelector(".post__title span:last-child").textContent;
-  platformName = platformName.replace(/[()]/g, "");
-  return sanitizeText(platformName);
+  const service = postData.service;
+  return sanitizeText(PLATFORM_NAMES[service] || service);
 }
 
 function getUserName() {
-  let userName = document.querySelector("a.post__user-name").textContent;
-  return sanitizeText(userName);
+  return sanitizeText(postData.userName);
+}
+
+function getService() {
+  let service = location.pathname.match(/^\/([^/]+)\/user\//);
+  return service[1];
 }
 
 function getUserID() {
@@ -21,8 +138,7 @@ function getPageID() {
 }
 
 function getTitle() {
-  let title = document.querySelector(".post__title span:first-child").textContent;
-  title = sanitizeText(title);
+  let title = sanitizeText(postData.title);
   if (title.length > 100) {
     title = title.slice(0, 100) + "(···)";
   }
@@ -30,11 +146,11 @@ function getTitle() {
 }
 
 function getImagesCount() {
-  return document.querySelectorAll(".post__thumbnail").length;
+  return postData.images.length;
 }
 
 function getAttachmentsCount() {
-  return document.querySelectorAll(".post__attachment").length;
+  return postData.attachments.length;
 }
 
 function sanitizeText(text, includeDot = true) {
@@ -65,21 +181,11 @@ function sanitizeText(text, includeDot = true) {
 
 // Functions for time macros
 function getDate(num) {
-  try {
-    src = document.querySelector(".timestamp").getAttribute("datetime");
-    replaced = /(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)/.exec(src);
-    if (replaced == null) {
-      replaced = /(\d+)-(\d+)-(\d+)\s(\d+):(\d+):(\d+)/.exec(src);
-    }
-    return replaced[num];
-  } catch (error) {
-    src = document.querySelector(".post__published").textContent;
-    replaced = src.match(/(\d+)-(\d+)-(\d+)\s(\d+):(\d+):(\d+)/);
-    if (replaced == null) {
-      replaced = ["0", "0000", "00", "00", "00", "00", "00"];
-    }
-    return replaced[num];
+  let replaced = /(\d+)-(\d+)-(\d+)[T\s](\d+):(\d+):(\d+)/.exec(postData.published);
+  if (replaced == null) {
+    replaced = ["0", "0000", "00", "00", "00", "00", "00"];
   }
+  return replaced[num];
 }
 
 function getDateNow(query) {
@@ -97,76 +203,53 @@ function getDateNow(query) {
 
 // Downloading functions
 function collectContent(type) {
-  const isImages = type === 'image'; // 인자로 받은 type이 image면 isImages는 true
-  const selector = isImages ? '.post__thumbnail' : '.post__attachment'; // isImages가 true면 '.post__thumbnail', false면 '.post__attachment' 반환
-  const items = document.querySelectorAll(selector); // html에서 selector에 해당하는 값을 모두 찾아서 items 리스트에 저장
+  const isImages = type === 'image';
+  const files = isImages ? postData.images : postData.attachments; // API 응답을 확장자로 분류해 둔 목록 (classifyFiles 참고)
 
-  const seenUrls = new Set(); // Set을 만들어두어 중복된 URL을 필터링 및, 모든 html을 코드 반복 시 마다 실행하는 대신 한번에 저장하여 효율성 증대
+  const seenUrls = new Set(); // cbRemoveDupByUrl 이 켜져 있을 때 같은 URL을 걸러내기 위한 Set
   let validIndex = 1; // 다운로드 가능한 항목만 체크하기 위한 변수
 
-  return Array.from(items).reduce((acc, item) => { // 위에서 저장해둔 items 배열로 반복문 시작. acc와 item이라는 변수를 지정하고 출발함
-    let rawUrl = null; // rawUrl 초기화
+  return files.reduce((acc, file) => {
+    const urlPart = file.url;
 
-    if (isImages) { // 만약 isImages가 true일 시
-      const link = item.querySelector('a'); // item 에서 a를 긁어오는 코드
-      const img = item.querySelector('img'); // item 에서 img를 긁어오는 코드
-      rawUrl = link ? link.getAttribute('href') : (img ? img.getAttribute('src') : null); // link.href 혹은 img.src로 찾아본 후, 없으면 null 반환
-    } else { // imImages가 0일 시
-      const fileLink = item.querySelector('.post__attachment-link'); // item 에서 .post__attachment-link 를 긁어옴
-      rawUrl = fileLink ? fileLink.getAttribute('href') : null; // fileLink가 있을 시 href를 긁고, 아니면 null 반환
-    }
+    // cbRemoveDupByUrl 은 checkbox Remove Duplicate By URL 로, 확장프로그램의 설정 페이지에서 체크박스 형식으로 존재함.
+    if (cbRemoveDupByUrl && seenUrls.has(urlPart)) return acc;
 
-    if (!rawUrl) return acc; // raw Url이 false 일 시 acc 반환 후 다음 항목 실행 (저장하지 않고 넘어감)
+    //Extract extension from URL (서버에 저장된 해시 파일명), not in start or end
+    const urlLastSlash = urlPart.lastIndexOf('/');
+    const fileNameFromUrl = urlPart.substring(urlLastSlash + 1);
+    const urlDotIdx = fileNameFromUrl.lastIndexOf('.');
 
-    const [urlPart, namePart] = rawUrl.split('?'); // rawUrl에서 ?로 구분하여 urlPart와 namePart로 분리
+    let extension = (urlDotIdx > 0 && urlDotIdx < fileNameFromUrl.length - 1)
+      ? fileNameFromUrl.substring(urlDotIdx)
+      : '.txt';
 
-    // cbRemoveDubByUrl 은 checkbox Remove Duplicate By URL 로, 확장프로그램의 설정 페이지에서 체크박스 형식으로 존재함.
-    if (cbRemoveDupByUrl && seenUrls.has(urlPart)) return acc; // cbRemoveDupByUrl 가 true, seenUrls라는 Set에서 해당 urlPart가 있으면 acc 반환 (저장되지 않고 넘어감)
-
-    //Extract filename from URL, check position of dot, get extension if esists, not in start or end 
-    const urlLastSlash = urlPart.lastIndexOf('/'); // urlPart에서 /가 들어간 부분의 위치를 저장
-    const fileNameFromUrl = urlPart.substring(urlLastSlash + 1); // urlPart를 urlLastSlash + 1 부터 시작하는 문자열로 저장 
-    const urlDotIdx = fileNameFromUrl.lastIndexOf('.'); // fileNameFromUrl 에서 .의 위치를 urlDotIdx에 저장
-
-    let extension = (urlDotIdx > 0 && urlDotIdx < fileNameFromUrl.length - 1) // 확장자 지정 urlDotIdx가 0보다 크고, urlDotIdx가 fileNameFromUrl의 문자열 길이 -1 보다 작을 때,
-      ? fileNameFromUrl.substring(urlDotIdx) // 확장자명은 urlDotIdx 이후의 문자로 지정
-      : '.txt'; // 그게 아닐 시 텍스트 파일로 지정
-
-    let rawFileName = (namePart && namePart.includes('f=')) // rawFileName은 namePart 가 false가 아니고 f=를 포함하고 있다면
-      ? namePart.split('f=')[1] //f=이후의 문자열로 반환
-      : `file_${validIndex}.${extension}`; // 아니라면 위에서 지정한 validIndex(=1) + '.' + 확장자명 으로 지정
-
-    // try - just for peace of mind in case of broken URLs
-    try {
-      rawFileName = decodeURIComponent(rawFileName).replace(/\+/g, ' '); // 알바벳 이외의 문자를 읽을 수 있게 변환하고 + 를 공백으로 변환
-    } catch (e) { } // 에러 시 아무것도 안 함
+    let rawFileName = file.name || `file_${validIndex}${extension}`; // 원본 파일명이 없으면 file_번호.확장자
 
     //The same extension check and extraction, as for URL
     let finalNameOnly = rawFileName;
-    const lastDotIndex = rawFileName.lastIndexOf('.'); // rawFileName의 .의 위치를 저장
+    const lastDotIndex = rawFileName.lastIndexOf('.');
 
-    if (lastDotIndex > 0 && lastDotIndex < rawFileName.length - 1) { // lastDotIndex가 0보다 크고 .의 위치가 파일명의 마지막 글자가 아닐 때
-      extension = rawFileName.substring(lastDotIndex); // 확장자는 lastDotIndex 이후의 것으로 저장
-      finalNameOnly = rawFileName.substring(0, lastDotIndex); // 파일 명은 rawFileName의 0부터 lastDotIndex 직전까지로 저장
+    if (lastDotIndex > 0 && lastDotIndex < rawFileName.length - 1) { // 원본 파일명에 확장자가 있으면 그것을 사용
+      extension = rawFileName.substring(lastDotIndex);
+      finalNameOnly = rawFileName.substring(0, lastDotIndex);
     }
 
-    if (cbRemoveDupByUrl) seenUrls.add(urlPart); //cbRemoveDubByUrl이 true일 시 urlPart를 seenUrls에 삽입
+    if (cbRemoveDupByUrl) seenUrls.add(urlPart);
 
-    acc.push({ // 위에 코드들이 정상적으로 실행되고서 최종적으로
-      index: validIndex++, // index에 현재 validIndex값을 삽입 후, 하나씩 올려가며 url을 점차적으로 긁어옴
-      url: urlPart, // 파일 이름을 땐 url을 사용
-      name: sanitizeText(finalNameOnly, false), // 사용할 수 없는 문자열을 제거한 finalNameOnly
-      extension: extension // 확장자명
+    acc.push({
+      index: validIndex++,
+      url: rawFileName ? `${urlPart}?f=${encodeURIComponent(rawFileName)}` : urlPart, // ?f= 는 서버가 원본 파일명으로 내려주게 하는 파라미터
+      name: sanitizeText(finalNameOnly, false),
+      extension: extension
     });
 
-    // acc를 뒤에 나올 [] 배열에 순서대로 정렬
     return acc;
   }, []);
 }
 
 function dlText(batchId, usedNames) {
-  const container = document.querySelector(".post__content");
-  const text = container ? container.innerText.trim() : null
+  const text = htmlToText(postData.content);
   if (text) {
     const blob2 = new Blob([text], { type: "text/plain" });
     filename = makeUniqueInBatch(convertMacrosInPath(txtBasePath + "/" + txtTextPath) + ".txt", usedNames);
@@ -289,6 +372,21 @@ async function main(str) {
   globalThis.cbRemoveDupByUrl = str.cbRemoveDupByUrl;
   const delay = parseInt(str.numDownloadDelay);
   globalThis.numDownloadDelay = isNaN(delay) || delay < 0 ? 150 : delay; // 파일 간 다운로드 지연 시간 (ms)
+
+  // 게시글 정보를 API로 받아옴. 아래 매크로 변환과 다운로드 목록이 모두 이것을 사용
+  try {
+    globalThis.postData = await fetchPostData();
+  } catch (error) {
+    console.error('main: failed to fetch post', error);
+    const notFound = error instanceof PostNotFoundError;
+    showToast(
+      '❌ ' + chrome.i18n.getMessage(notFound ? 'notify_post_not_found_title' : 'notify_post_fetch_failed_title'),
+      notFound ? '' : String(error.message || error),
+      '',
+      'error'
+    );
+    return;
+  }
 
   // 배치 ID 생성 (유저ID_페이지ID_타임스탬프)
   const batchId = `${getUserID()}_${getPageID()}_${Date.now()}`;
@@ -513,4 +611,4 @@ function handleBatchResult(result) {
       'error'
     );
   }
-}
+}
