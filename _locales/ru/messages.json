@@ -286,5 +286,35 @@
   },
   "notify_post_fetch_failed_title": {
     "message": "Не удалось загрузить информацию о посте"
+  },
+  "button_cancel": {
+    "message": "Отмена"
+  },
+  "confirm_creator_download": {
+    "message": "Скачать все посты автора ($1)?"
+  },
+  "notify_creator_loading": {
+    "message": "Загрузка списка постов автора…"
+  },
+  "notify_creator_no_posts": {
+    "message": "У этого автора нет постов"
+  },
+  "notify_creator_progress": {
+    "message": "Скачивание поста $1/$2"
+  },
+  "notify_creator_waiting": {
+    "message": "Ожидание завершения загрузок…"
+  },
+  "notify_creator_complete_title": {
+    "message": "Загрузка автора завершена"
+  },
+  "notify_creator_cancelled_title": {
+    "message": "Загрузка автора отменена"
+  },
+  "notify_creator_stats": {
+    "message": "Постов: $1, файлов успешно: $2/$3"
+  },
+  "notify_creator_fetch_failed": {
+    "message": "Не удалось загрузить постов: $1"
   }
 }

@@ -286,5 +286,35 @@
   },
   "notify_post_fetch_failed_title": {
     "message": "投稿情報の取得に失敗しました"
+  },
+  "button_cancel": {
+    "message": "キャンセル"
+  },
+  "confirm_creator_download": {
+    "message": "このクリエイターの投稿$1件をすべてダウンロードしますか？"
+  },
+  "notify_creator_loading": {
+    "message": "クリエイターの投稿一覧を読み込み中…"
+  },
+  "notify_creator_no_posts": {
+    "message": "このクリエイターの投稿はありません"
+  },
+  "notify_creator_progress": {
+    "message": "投稿をダウンロード中 $1/$2"
+  },
+  "notify_creator_waiting": {
+    "message": "ダウンロードの完了を待っています…"
+  },
+  "notify_creator_complete_title": {
+    "message": "クリエイターのダウンロード完了"
+  },
+  "notify_creator_cancelled_title": {
+    "message": "クリエイターのダウンロードを中止しました"
+  },
+  "notify_creator_stats": {
+    "message": "投稿$1件、ファイル $2/$3 成功"
+  },
+  "notify_creator_fetch_failed": {
+    "message": "投稿$1件を読み込めませんでした"
   }
 }

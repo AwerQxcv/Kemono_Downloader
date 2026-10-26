@@ -1,6 +1,7 @@
 // === 게시글 API ===
 // kemono / pawchive 모두 /api/v1/{service}/user/{user}/post/{id} 구조를 사용.
 // HTML 파싱 대신 이 API로 게시글 정보를 받아와 globalThis.postData에 저장해 두고, 아래 매크로/다운로드 함수들이 이것을 사용함.
+// 작가 페이지에서는 게시글을 하나씩 받아 postData를 바꿔가며 같은 다운로드 과정을 반복함 (downloadCreator 참고).
 
 // 이미지(본문 이미지)로 취급할 확장자. 사이트 프론트엔드도 확장자로 이미지/첨부파일을 나눔
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.jpe', '.jfif', '.png', '.gif', '.webp', '.avif', '.bmp']);
@@ -21,25 +22,41 @@ const PLATFORM_NAMES = {
   candfans: 'CandFans',
 };
 
+const CREATOR_PAGE_SIZE = 50; // 작가 게시글 목록 API는 o(offset)를 50 단위로 받음
+const CREATOR_POST_INTERVAL = 1000; // 작가 일괄 다운로드 시 게시글 사이 대기 시간 (ms). 서버 429 방지용
+const RATE_LIMIT_RETRY = 5; // 429(요청 너무 많음)일 때 재시도 횟수
+const RATE_LIMIT_WAIT = 5000; // 429일 때 기본 대기 시간 (ms). 재시도할수록 늘어남
+
 class PostNotFoundError extends Error { }
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // kemono API는 Accept: text/css 가 아니면 403을 주는 경우가 있어 먼저 text/css로 시도하고, 실패하면 일반 Accept로 재시도
 async function apiGet(path) {
   let response;
-  for (const accept of ['text/css', '*/*']) {
-    response = await fetch(location.origin + '/api/v1' + path, { headers: { 'Accept': accept }, credentials: 'include' });
-    if (response.ok || response.status === 404) break;
+  for (let attempt = 0; ; attempt++) {
+    for (const accept of ['text/css', '*/*']) {
+      response = await fetch(location.origin + '/api/v1' + path, { headers: { 'Accept': accept }, credentials: 'include' });
+      if (response.ok || response.status === 404 || response.status === 429) break;
+    }
+    if (response.status !== 429 || attempt >= RATE_LIMIT_RETRY) break;
+    // 429면 Retry-After(초)만큼, 없으면 점점 길게 쉬었다가 다시 요청
+    const retryAfter = parseInt(response.headers.get('Retry-After'));
+    await sleep(isNaN(retryAfter) ? RATE_LIMIT_WAIT * (attempt + 1) : retryAfter * 1000);
   }
   if (response.status === 404) throw new PostNotFoundError(path);
   if (!response.ok) throw new Error(`API ${path} : HTTP ${response.status}`);
   return JSON.parse(await response.text()); // Content-Type이 text/css로 올 수 있어 response.json() 대신 직접 파싱
 }
 
-async function fetchPostData() {
-  const service = getService();
-  const userID = getUserID();
-  const pageID = getPageID();
+// 현재 주소에서 서비스 / 유저 ID / 게시글 ID 추출. 작가 페이지면 pageID는 null
+function parsePagePath() {
+  const match = location.pathname.match(/^\/([^/]+)\/user\/([^/]+)(?:\/post\/([a-zA-Z0-9-]+))?\/?$/);
+  if (!match) return null;
+  return { service: match[1], userID: match[2], pageID: match[3] || null };
+}
 
+async function fetchPostData(service, userID, pageID) {
   const data = await apiGet(`/${service}/user/${userID}/post/${pageID}`);
   // 평평한 게시글 JSON과 { post, attachments, previews, videos } 형태 둘 다 지원
   const post = data && data.post ? data.post : data;
@@ -49,6 +66,8 @@ async function fetchPostData() {
 
   return {
     service: service,
+    userID: userID,
+    pageID: pageID,
     userName: await fetchUserName(service, userID),
     title: decodeHtmlEntities(post.title || ''),
     content: post.content || '',
@@ -59,15 +78,64 @@ async function fetchPostData() {
 }
 
 // 유저 이름은 게시글 API에 없으므로 프로필 API에서 가져옴. 실패하면 페이지에서 읽고, 그것도 안 되면 유저 ID 사용
+// 작가 일괄 다운로드 때 게시글마다 다시 요청하지 않도록 저장해 둠
+const userNameCache = new Map();
+
 async function fetchUserName(service, userID) {
+  const key = `${service}/${userID}`;
+  if (!userNameCache.has(key)) {
+    userNameCache.set(key, await loadUserName(service, userID));
+  }
+  return userNameCache.get(key);
+}
+
+async function loadUserName(service, userID) {
   try {
     const profile = await apiGet(`/${service}/user/${userID}/profile`);
     if (profile && profile.name) return decodeHtmlEntities(profile.name);
   } catch (error) {
     console.warn('fetchUserName: profile API failed', error);
   }
-  const link = document.querySelector("a.post__user-name");
+  const link = document.querySelector('a.post__user-name, .user-header__profile span[itemprop="name"]');
   return link ? link.textContent : userID;
+}
+
+// 작가의 모든 게시글 ID를 최신순으로 모음. o를 50씩 올리며 빈 목록이 올 때까지 요청
+// 목록 경로는 사이트마다 /user/{id}/posts 또는 /user/{id} 이므로 첫 페이지에서 되는 쪽을 골라 계속 사용
+async function fetchCreatorPostIDs(service, userID) {
+  const candidates = [`/${service}/user/${userID}/posts`, `/${service}/user/${userID}`];
+  const ids = [];
+  const seenIDs = new Set();
+  let listPath = null;
+
+  for (let offset = 0; ; offset += CREATOR_PAGE_SIZE) {
+    let posts = null;
+    for (const path of listPath ? [listPath] : candidates) {
+      try {
+        const data = await apiGet(`${path}?o=${offset}`);
+        posts = Array.isArray(data) ? data : (data && Array.isArray(data.posts) ? data.posts : null);
+      } catch (error) {
+        if (listPath) throw error; // 이미 되던 경로가 도중에 실패하면 중단
+        console.warn(`fetchCreatorPostIDs: ${path} failed`, error);
+      }
+      if (posts) {
+        listPath = path;
+        break;
+      }
+    }
+    if (!posts) throw new Error('creator post list API not available');
+
+    let added = 0;
+    for (const post of posts) {
+      if (!post || !post.id || seenIDs.has(String(post.id))) continue;
+      seenIDs.add(String(post.id));
+      ids.push(String(post.id));
+      added++;
+    }
+    // 빈 페이지거나, 새 게시글이 하나도 없으면(같은 페이지 반복 방지) 끝
+    if (posts.length === 0 || added === 0) break;
+  }
+  return ids;
 }
 
 // file + attachments를 확장자로 이미지 / 첨부파일로 분류
@@ -122,19 +190,12 @@ function getUserName() {
   return sanitizeText(postData.userName);
 }
 
-function getService() {
-  let service = location.pathname.match(/^\/([^/]+)\/user\//);
-  return service[1];
-}
-
 function getUserID() {
-  let userID = location.pathname.match(/(?<=user\/)(.*)(?=\/post)/);
-  return userID[0];
+  return postData.userID;
 }
 
 function getPageID() {
-  let pageID = location.pathname.match(/(?<=\/post\/)[a-zA-Z0-9-]+/);
-  return pageID[0];
+  return postData.pageID;
 }
 
 function getTitle() {
@@ -373,27 +434,51 @@ async function main(str) {
   const delay = parseInt(str.numDownloadDelay);
   globalThis.numDownloadDelay = isNaN(delay) || delay < 0 ? 150 : delay; // 파일 간 다운로드 지연 시간 (ms)
 
+  const page = parsePagePath();
+  if (!page) return;
+  if (creatorRun) return; // 작가 일괄 다운로드 중에는 postData를 쓰고 있으므로 새 다운로드를 시작하지 않음
+
+  if (page.pageID) {
+    await downloadSinglePost(str, page);
+  } else {
+    await downloadCreator(str, page);
+  }
+}
+
+function showPostFetchError(error, body = '') {
+  const notFound = error instanceof PostNotFoundError;
+  showToast(
+    '❌ ' + chrome.i18n.getMessage(notFound ? 'notify_post_not_found_title' : 'notify_post_fetch_failed_title'),
+    body || (notFound ? '' : String(error.message || error)),
+    '',
+    'error'
+  );
+}
+
+// 게시글 페이지: 현재 게시글 하나를 다운로드
+async function downloadSinglePost(str, page) {
   // 게시글 정보를 API로 받아옴. 아래 매크로 변환과 다운로드 목록이 모두 이것을 사용
   try {
-    globalThis.postData = await fetchPostData();
+    globalThis.postData = await fetchPostData(page.service, page.userID, page.pageID);
   } catch (error) {
     console.error('main: failed to fetch post', error);
-    const notFound = error instanceof PostNotFoundError;
-    showToast(
-      '❌ ' + chrome.i18n.getMessage(notFound ? 'notify_post_not_found_title' : 'notify_post_fetch_failed_title'),
-      notFound ? '' : String(error.message || error),
-      '',
-      'error'
-    );
+    showPostFetchError(error);
     return;
   }
+  await downloadPost(str);
+}
 
+// postData에 들어있는 게시글 하나를 하나의 배치로 다운로드하고 batchId를 반환
+async function downloadPost(str) {
   // 배치 ID 생성 (유저ID_페이지ID_타임스탬프)
   const batchId = `${getUserID()}_${getPageID()}_${Date.now()}`;
 
-  // 알림 문구는 지금(게시글 페이지에 있는 시점) 미리 만들어 둠.
-  // 완료 시점에는 사용자가 다른 페이지로 이동했을 수 있어 그때 매크로를 변환하면 실패하거나 엉뚱한 제목이 나옴
+  // 알림 문구는 지금(게시글 정보가 있는 시점) 미리 만들어 둠.
+  // 완료 시점에는 사용자가 다른 페이지로 이동했거나 다음 게시글로 넘어갔을 수 있어 그때 매크로를 변환하면 엉뚱한 제목이 나옴
   const notificationText = convertMacrosInPath(str.txtNotificationFormat || '$PlatformName$ $UserName$ - $Title$');
+
+  // 작가 일괄 다운로드 중이면 결과를 모아서 마지막에 한 번만 알림 (handleBatchResult 참고)
+  if (creatorRun) creatorRun.pendingBatchIds.add(batchId);
 
   // 배치 시작 알림
   chrome.runtime.sendMessage({ type: "batch-start", batchId: batchId, notificationText: notificationText });
@@ -414,6 +499,84 @@ async function main(str) {
     // 배치 종료 알림 (모든 다운로드 요청 전송 완료). 도중에 오류가 나도 보내야 결과 알림이 뜸
     chrome.runtime.sendMessage({ type: "batch-end", batchId: batchId });
   }
+  return batchId;
+}
+
+// === 작가 페이지 일괄 다운로드 ===
+// 진행 중인 작가 일괄 다운로드 상태. 없으면 null
+// { total, sent, fetchFailed, cancelled, dispatchDone, pendingBatchIds, files, filesFailed, progress }
+let creatorRun = null;
+
+async function downloadCreator(str, page) {
+  const progress = showProgressToast(chrome.i18n.getMessage('notify_creator_loading'));
+  let ids;
+  try {
+    ids = await fetchCreatorPostIDs(page.service, page.userID);
+  } catch (error) {
+    console.error('downloadCreator: failed to fetch post list', error);
+    progress.remove();
+    showPostFetchError(error);
+    return;
+  }
+  progress.remove();
+
+  if (ids.length === 0) {
+    showToast('ℹ️ ' + chrome.i18n.getMessage('notify_creator_no_posts'), '', '', 'warning');
+    return;
+  }
+  if (!confirm(chrome.i18n.getMessage('confirm_creator_download', [ids.length.toString()]))) return;
+
+  creatorRun = {
+    total: ids.length,
+    sent: 0,
+    fetchFailed: 0,
+    cancelled: false,
+    dispatchDone: false,
+    pendingBatchIds: new Set(),
+    files: 0,
+    filesFailed: 0,
+    progress: showProgressToast('', () => { creatorRun.cancelled = true; }),
+  };
+  const run = creatorRun;
+
+  for (const [i, pageID] of ids.entries()) {
+    if (run.cancelled) break;
+    run.progress.update(chrome.i18n.getMessage('notify_creator_progress', [(i + 1).toString(), run.total.toString()]));
+    try {
+      globalThis.postData = await fetchPostData(page.service, page.userID, pageID);
+      await downloadPost(str);
+      run.sent++;
+    } catch (error) {
+      console.error(`downloadCreator: post ${pageID} failed`, error);
+      run.fetchFailed++;
+    }
+    if (i < ids.length - 1) await sleep(CREATOR_POST_INTERVAL);
+  }
+
+  run.dispatchDone = true;
+  run.progress.update(chrome.i18n.getMessage('notify_creator_waiting'), false);
+  finishCreatorRunIfDone();
+}
+
+// 모든 게시글 요청을 보냈고 모든 배치 결과가 돌아왔으면 요약 알림을 띄우고 종료
+function finishCreatorRunIfDone() {
+  const run = creatorRun;
+  if (!run || !run.dispatchDone || run.pendingBatchIds.size > 0) return;
+  creatorRun = null;
+  run.progress.remove();
+
+  const filesOk = run.files - run.filesFailed;
+  const failed = run.filesFailed > 0 || run.fetchFailed > 0;
+  const lines = [chrome.i18n.getMessage('notify_creator_stats', [run.sent.toString(), filesOk.toString(), run.files.toString()])];
+  if (run.fetchFailed > 0) {
+    lines.push(chrome.i18n.getMessage('notify_creator_fetch_failed', [run.fetchFailed.toString()]));
+  }
+  showToast(
+    (failed ? '⚠️ ' : '✅ ') + chrome.i18n.getMessage(run.cancelled ? 'notify_creator_cancelled_title' : 'notify_creator_complete_title'),
+    lines.join('\n'),
+    '',
+    failed || run.cancelled ? 'warning' : 'success'
+  );
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender) {
@@ -489,6 +652,31 @@ function createToastContainer() {
       background: linear-gradient(135deg, rgba(220, 53, 69, 0.93), rgba(170, 40, 52, 0.93));
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
+    .kd-toast.kd-progress {
+      background: linear-gradient(135deg, rgba(52, 58, 64, 0.93), rgba(33, 37, 41, 0.93));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .kd-toast-button {
+      flex-shrink: 0;
+      padding: 4px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 6px;
+      background: transparent;
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .kd-toast-button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .kd-toast.kd-progress .kd-toast-title {
+      margin-bottom: 0;
+    }
     .kd-toast-title {
       font-weight: 700;
       font-size: 14px;
@@ -499,6 +687,7 @@ function createToastContainer() {
       opacity: 0.92;
       font-size: 12.5px;
       word-break: break-word;
+      white-space: pre-line;
     }
     .kd-toast-stats {
       opacity: 0.75;
@@ -574,7 +763,51 @@ function showToast(title, body, stats, type) {
   }
 }
 
+// 작가 일괄 다운로드 진행 상황을 보여주는, 사라지지 않는 토스트. onCancel이 있으면 취소 버튼 표시
+function showProgressToast(text, onCancel) {
+  const container = createToastContainer();
+
+  const toast = document.createElement('div');
+  toast.className = 'kd-toast kd-progress';
+  const line = document.createElement('div');
+  line.className = 'kd-toast-title';
+  toast.appendChild(line);
+
+  let button = null;
+  if (onCancel) {
+    button = document.createElement('button');
+    button.className = 'kd-toast-button';
+    button.textContent = chrome.i18n.getMessage('button_cancel');
+    button.addEventListener('click', () => {
+      button.disabled = true;
+      onCancel();
+    });
+    toast.appendChild(button);
+  }
+  container.appendChild(toast);
+
+  const update = (newText, cancellable = true) => {
+    line.textContent = newText;
+    if (button && !cancellable) button.remove();
+  };
+  update(text);
+  return { update, remove: () => toast.remove() };
+}
+
 function handleBatchResult(result) {
+  // 작가 일괄 다운로드에 속한 배치면 결과만 모으고, 실패가 있을 때만 해당 게시글 알림을 띄움
+  if (creatorRun && creatorRun.pendingBatchIds.has(result.batchId)) {
+    creatorRun.pendingBatchIds.delete(result.batchId);
+    creatorRun.files += result.total;
+    creatorRun.filesFailed += result.failed;
+    if (result.failed > 0) showBatchResultToast(result);
+    finishCreatorRunIfDone();
+    return;
+  }
+  showBatchResultToast(result);
+}
+
+function showBatchResultToast(result) {
   // 다운로드 시작 시점에 만들어 둔 알림 문구 사용 (main 참고)
   const notificationText = result.notificationText || '';
 
