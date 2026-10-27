@@ -607,7 +607,7 @@ async function downloadPost(str) {
 
 // === 작가 페이지 일괄 다운로드 ===
 // 진행 중인 작가 일괄 다운로드 상태. 없으면 null
-// { total, excluded, sent, fetchFailed, cancelled, abort, dispatchDone, pendingBatchIds, files, filesFailed, filesCancelled, progress, waitLogTimer }
+// { total, excluded, sent, fetchFailed, cancelled, abort, dispatchDone, pendingBatchIds, files, filesFailed, filesCancelled, progress, waitLogTimer, cancelTimer }
 let creatorRun = null;
 
 async function downloadCreator(str, page) {
@@ -662,6 +662,7 @@ async function downloadCreator(str, page) {
     filesCancelled: 0,
     progress: null,
     waitLogTimer: null,
+    cancelTimer: null,
   };
   run.progress = showProgressToast('', () => cancelCreatorRun(run));
   creatorRun = run;
@@ -786,6 +787,28 @@ function cancelCreatorRun(run) {
   debugLog(`취소 요청: 배치 ${run.pendingBatchIds.size}개의 남은 파일 취소`);
   chrome.runtime.sendMessage({ type: 'cancel-batches', batchIds: Array.from(run.pendingBatchIds) });
   run.progress.update(chrome.i18n.getMessage('notify_creator_cancelling'), false);
+  // 정리가 끝날 때까지 남은 파일 수를 표시 (끝나면 finishCreatorRunIfDone에서 멈춤)
+  const refresh = async () => {
+    const status = await getBatchStatus(Array.from(run.pendingBatchIds));
+    if (status && creatorRun === run) run.progress.update(cancellingText(status), false);
+  };
+  refresh();
+  run.cancelTimer = setInterval(refresh, 1000);
+}
+
+// 백그라운드에서 배치들의 진행 상황을 받아옴 (event_page.js의 batch-status). 실패하면 null
+async function getBatchStatus(batchIds) {
+  try {
+    return await browser.runtime.sendMessage({ type: 'batch-status', batchIds: batchIds }) || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+// 취소하는 동안 표시할 문구: 아직 정리되지 않은 파일 수
+function cancellingText(status) {
+  return chrome.i18n.getMessage('notify_creator_cancelling') + '\n' +
+    chrome.i18n.getMessage('notify_cancel_remaining', [status.files.length.toString()]);
 }
 
 // 모든 게시글 요청을 보냈고 모든 배치 결과가 돌아왔으면 요약 알림을 띄우고 종료
@@ -794,6 +817,7 @@ function finishCreatorRunIfDone() {
   if (!run || !run.dispatchDone || run.pendingBatchIds.size > 0) return;
   creatorRun = null;
   clearInterval(run.waitLogTimer);
+  clearInterval(run.cancelTimer);
   run.progress.remove();
   debugLog(`작가 일괄 다운로드 끝: 건너뛴 게시글 ${run.skippedPosts}개, 게시글 ${run.sent}개, 파일 ${run.files}개 중 실패 ${run.filesFailed}개, 취소 ${run.filesCancelled}개`);
 
@@ -1070,20 +1094,20 @@ function startPostProgress(batchId) {
     entry.progress.update(chrome.i18n.getMessage('notify_creator_cancelling'), false);
     debugLog(`게시글 다운로드 취소 요청: ${batchId}`);
     chrome.runtime.sendMessage({ type: 'cancel-batches', batchIds: [batchId] });
+    refreshPostProgress(batchId);
   });
   entry.timer = setInterval(() => refreshPostProgress(batchId), POST_PROGRESS_INTERVAL);
   postProgressToasts.set(batchId, entry);
 }
 
 async function refreshPostProgress(batchId) {
-  let status;
-  try {
-    status = await browser.runtime.sendMessage({ type: 'batch-status', batchIds: [batchId] });
-  } catch (error) {
+  const status = await getBatchStatus([batchId]);
+  const entry = postProgressToasts.get(batchId);
+  if (!status || !entry) return; // 그사이 끝남
+  if (entry.cancelling) {
+    entry.progress.update(cancellingText(status), false);
     return;
   }
-  const entry = postProgressToasts.get(batchId);
-  if (!status || !entry || entry.cancelling) return; // 그사이 끝났거나 취소 중
   const retrying = status.files.filter((file) => file.retryCount > 0).length;
   let text = chrome.i18n.getMessage('notify_post_progress', [status.done.toString(), status.total.toString()]);
   if (retrying > 0) text += '\n' + chrome.i18n.getMessage('notify_post_retrying', [retrying.toString()]);

@@ -249,7 +249,7 @@
     "message": "Download progress for a single post"
   },
   "update_notes_v132_progress_desc": {
-    "message": "Downloading one post now shows how many files are done and how many are retrying, and you can cancel it from the notification."
+    "message": "Downloading one post now shows how many files are done and how many are retrying, and you can cancel it from the notification. While cancelling (creator downloads too), it shows how many files are left to clean up."
   },
   "update_notes_v131_skip_title": {
     "message": "Skip files that were already downloaded"
@@ -436,6 +436,9 @@
   },
   "notify_creator_cancelling": {
     "message": "Cancelling… cleaning up the remaining downloads"
+  },
+  "notify_cancel_remaining": {
+    "message": "$1 files left to clean up"
   },
   "notify_creator_cancelled_files": {
     "message": "$1 files cancelled"
