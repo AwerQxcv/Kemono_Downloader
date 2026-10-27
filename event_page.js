@@ -15,8 +15,10 @@ let maxRetry = DEFAULT_MAX_RETRY;
 // 같은 이름의 파일이 있을 때 동작 ("uniquify": 001(1).jpg 처럼 새 이름, "overwrite": 덮어쓰기)
 const DEFAULT_CONFLICT_ACTION = 'uniquify';
 let conflictAction = DEFAULT_CONFLICT_ACTION;
-// 동시에 진행할 최대 다운로드 수 (0은 제한 없음, 1이면 하나가 끝나야 다음 파일 시작)
-const DEFAULT_MAX_CONCURRENT = 0;
+// 동시에 진행할 최대 다운로드 수 (1~5. 1이면 하나가 끝나야 다음 파일 시작)
+// 너무 많이 동시에 받으면 서버가 응답을 끊는 경우가 많아 최대 5개로 제한
+const DEFAULT_MAX_CONCURRENT = 3;
+const MAX_CONCURRENT_LIMIT = 5;
 let maxConcurrent = DEFAULT_MAX_CONCURRENT;
 // 이미 받은 파일 건너뛰기 방식
 //   "off": 건너뛰지 않음
@@ -36,9 +38,11 @@ function parseRetryCount(value) {
   return isNaN(n) || n < 0 ? DEFAULT_MAX_RETRY : n;
 }
 
+// 예전 설정의 0(제한 없음)이나 5보다 큰 값은 5로
 function parseMaxConcurrent(value) {
   const n = parseInt(value);
-  return isNaN(n) || n < 0 ? DEFAULT_MAX_CONCURRENT : n;
+  if (isNaN(n) || n < 0) return DEFAULT_MAX_CONCURRENT;
+  return n === 0 ? MAX_CONCURRENT_LIMIT : Math.min(n, MAX_CONCURRENT_LIMIT);
 }
 
 function parseSkipMode(value) {
@@ -147,7 +151,7 @@ browser.runtime.onInstalled.addListener((details) => {
 
 
 // === 메시지 핸들러 ===
-chrome.runtime.onMessage.addListener(function (request, sender) {
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   const tabId = sender.tab?.id;
 
   if (request.type === "batch-start") {
@@ -176,6 +180,10 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
       batch.dispatched = true;
       checkBatchCompletion(request.batchId);
     }
+
+  } else if (request.type === "queue-status") {
+    // 작가 일괄 다운로드가 대기열이 줄 때까지 다음 게시글을 미루는 데 사용
+    sendResponse({ queued: downloadQueue.length, active: activeDownloads });
 
   } else if (request.type === "cancel-batches") {
     // 작가 일괄 다운로드 취소: 해당 배치의 남은 파일을 모두 취소
@@ -298,7 +306,7 @@ async function downloadAndTrack(url, filename, batchId) {
   }
 
   downloadQueue.push(item);
-  debugLog(`대기열 추가: ${filename} (대기 ${downloadQueue.length}개, 진행 ${activeDownloads}/${maxConcurrent || '∞'})`);
+  debugLog(`대기열 추가: ${filename} (대기 ${downloadQueue.length}개, 진행 ${activeDownloads}/${maxConcurrent})`);
   pumpQueue();
 }
 
@@ -334,7 +342,7 @@ function cancelItem(item) {
 
 // 자리가 남아 있는 만큼 대기열의 파일을 시작
 function pumpQueue() {
-  while (downloadQueue.length > 0 && (maxConcurrent === 0 || activeDownloads < maxConcurrent)) {
+  while (downloadQueue.length > 0 && activeDownloads < maxConcurrent) {
     const item = downloadQueue.shift();
     item.holdsSlot = true;
     activeDownloads++;
@@ -473,7 +481,7 @@ chrome.downloads.onChanged.addListener((delta) => {
 // onChanged 이벤트를 놓쳐 이미 끝난 다운로드가 "진행 중"으로 남은 경우도 여기서 정리됨
 async function checkStalledDownloads() {
   if (downloadToItemMap.size === 0 && downloadQueue.length === 0) return;
-  debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent || '∞'}), 대기열 ${downloadQueue.length}개, 배치 ${batchMap.size}개`);
+  debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent}), 대기열 ${downloadQueue.length}개, 배치 ${batchMap.size}개`);
 
   const now = Date.now();
   for (const [downloadId, item] of Array.from(downloadToItemMap)) {
