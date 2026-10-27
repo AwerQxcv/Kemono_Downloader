@@ -10,6 +10,10 @@ const NO_RESPONSE_TIMEOUT = 30000; // 30초
 // 받는 도중 받은 양이 이 시간 동안 그대로면 멈춘 다운로드로 보고 취소 후 다시 시도
 const STALL_TIMEOUT = 60000; // 1분
 const STALL_CHECK_INTERVAL = 5000; // 5초마다 확인
+// 브라우저에 다운로드를 요청했는데 이 시간 안에 시작되지 않으면 (저장 위치가 NAS 등이라 파일 만들기가 멈춘 경우 등) 포기하고 재시도
+const START_TIMEOUT = 30000;
+// 취소를 요청했는데 이 시간 안에 브라우저가 취소 완료를 알려주지 않으면 취소된 것으로 보고 다음으로 넘어감
+const CANCEL_CONFIRM_TIMEOUT = 10000;
 const STATUS_LOG_INTERVAL = 15000; // 상태 로그는 15초마다만
 
 // 콘솔 디버그 로그 (문제 확인용, about:debugging → 이 확장 → 검사). 끄려면 false
@@ -118,6 +122,8 @@ const downloadToItemMap = new Map();
 // maxConcurrent개까지만 동시에 진행하고, 나머지는 여기서 기다렸다가 앞의 파일이 끝나면 시작
 const downloadQueue = [];
 let activeDownloads = 0; // 자리를 차지하고 있는 항목 수 (시작 중, 진행 중). 재시도 대기 중인 항목은 자리를 비움
+// 브라우저에 다운로드를 요청하고 아직 downloadId를 받지 못한 항목 (downloadToItemMap에 없으므로 따로 감시)
+const startingItems = new Set();
 
 
 //コンテキスト表示
@@ -214,8 +220,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
           if (finished) done++;
         }
         if (finished) continue;
-        const tryTime = item.tryTime + (item.status === 'in_progress' && item.attemptStartedAt ? now - item.attemptStartedAt : 0);
-        files.push({ filename: item.filename, status: item.status, retryCount: item.retryCount, tryTime: tryTime });
+        const trying = item.status === 'starting' || item.status === 'in_progress';
+        const tryTime = item.tryTime + (trying && item.attemptStartedAt ? now - item.attemptStartedAt : 0);
+        files.push({ filename: item.filename, status: item.paused && item.status === 'in_progress' ? 'paused' : item.status, retryCount: item.retryCount, tryTime: tryTime });
       }
     }
     sendResponse({ files: files, maxRetry: maxRetry, total: total, done: done });
@@ -392,12 +399,14 @@ function cancelItem(item) {
     finishItem(item, 'cancelled', 'CANCELLED');
   } else if (item.status === 'in_progress' && item.downloadId !== null) {
     // 진행 중 → 브라우저 다운로드를 취소. onChanged(USER_CANCELED)에서 취소로 확정됨
+    // (알림이 오지 않으면 checkStalledDownloads가 CANCEL_CONFIRM_TIMEOUT 뒤에 확정)
+    item.cancelRequestedAt = Date.now();
     browser.downloads.cancel(item.downloadId).catch((error) => {
       console.warn('Download cancel failed:', error);
       finishItem(item, 'cancelled', 'CANCELLED');
     });
   }
-  // 'starting'은 download()가 끝난 뒤 startDownload에서 취소함
+  // 'starting'은 download()가 끝난 뒤 startDownload에서 취소함 (끝나지 않으면 checkStalledDownloads에서 START_TIMEOUT 뒤에 처리)
 }
 
 // 재시도 대기가 끝난 항목을 대기열 맨 뒤로 다시 넣음 (기다리는 동안 취소됐으면 cancelItem에서 이미 처리됨)
@@ -426,6 +435,10 @@ async function startDownload(item) {
     return;
   }
   item.status = 'starting';
+  item.attemptStartedAt = Date.now();
+  item.attempt = (item.attempt || 0) + 1; // START_TIMEOUT으로 포기한 시도가 늦게 끝났는지 구분
+  const attempt = item.attempt;
+  startingItems.add(item);
   let downloadId;
   try {
     downloadId = await browser.downloads.download({
@@ -435,6 +448,8 @@ async function startDownload(item) {
       conflictAction: conflictAction,
     });
   } catch (error) {
+    if (item.attempt !== attempt) return; // 이미 포기한 시도
+    startingItems.delete(item);
     console.error('Download start failed:', error);
     // 다운로드 시작 자체가 실패한 경우에도 배치에 기록
     if (item.cancelled) finishItem(item, 'cancelled', 'CANCELLED');
@@ -442,11 +457,17 @@ async function startDownload(item) {
     return;
   }
 
+  if (item.attempt !== attempt) {
+    // 시작이 너무 오래 걸려 이미 포기한 시도가 이제야 시작됨 → 이 다운로드는 취소 (항목은 재시도 중이거나 끝남)
+    debugLog(`늦게 시작된 다운로드 취소 #${downloadId}: ${item.filename}`);
+    browser.downloads.cancel(downloadId).catch(() => { });
+    return;
+  }
+  startingItems.delete(item);
   item.downloadId = downloadId;
   item.status = 'in_progress';
   item.lastBytes = 0;
   item.lastProgressAt = Date.now();
-  item.attemptStartedAt = item.lastProgressAt;
   downloadToItemMap.set(downloadId, item);
   debugLog(`시작 #${downloadId}: ${item.filename}${item.retryCount > 0 ? ` (재시도 ${item.retryCount}/${maxRetry})` : ''}`);
 
@@ -514,7 +535,12 @@ function handleDownloadError(downloadId, errorReason) {
     return;
   }
 
-  // 그 외 에러 → 자리를 비워 다음 파일을 먼저 받고, 잠시 뒤 대기열 맨 뒤로 다시 넣어 재시도
+  retryOrFail(item, errorReason);
+}
+
+// 자리를 비워 다음 파일을 먼저 받고, 잠시 뒤 대기열 맨 뒤로 다시 넣어 재시도. 횟수나 시간을 넘으면 실패로 확정
+function retryOrFail(item, errorReason) {
+  const downloadId = item.downloadId;
   if (item.attemptStartedAt) item.tryTime += Date.now() - item.attemptStartedAt;
   const outOfTime = item.tryTime >= RETRY_WINDOW;
   if (item.retryCount < maxRetry && !outOfTime) {
@@ -523,7 +549,7 @@ function handleDownloadError(downloadId, errorReason) {
     item.error = errorReason;
 
     // 기존 매핑 제거 (새 downloadId로 교체 예정)
-    downloadToItemMap.delete(downloadId);
+    if (downloadId !== null) downloadToItemMap.delete(downloadId);
     item.downloadId = null;
     if (item.holdsSlot) {
       item.holdsSlot = false;
@@ -531,12 +557,12 @@ function handleDownloadError(downloadId, errorReason) {
     }
 
     const delay = RETRY_DELAYS[Math.min(item.retryCount, RETRY_DELAYS.length) - 1];
-    debugLog(`오류 #${downloadId}: ${item.filename} (${errorReason}) → 다음 파일 먼저, ${delay / 1000}초 뒤 대기열 뒤에서 재시도 ${item.retryCount}/${maxRetry}`);
+    debugLog(`오류${downloadId !== null ? ` #${downloadId}` : ''}: ${item.filename} (${errorReason}) → 다음 파일 먼저, ${delay / 1000}초 뒤 대기열 뒤에서 재시도 ${item.retryCount}/${maxRetry}`);
     setTimeout(() => requeueItem(item), delay);
     pumpQueue();
   } else {
     // 재시도 횟수 또는 시간 초과 → 실패 확정
-    if (outOfTime) debugLog(`재시도 중단 #${downloadId}: ${item.filename} (${Math.round(item.tryTime / 1000)}초 동안 받지 못함)`);
+    if (outOfTime) debugLog(`재시도 중단: ${item.filename} (${Math.round(item.tryTime / 1000)}초 동안 받지 못함)`);
     finishItem(item, 'failed', errorReason);
   }
 }
@@ -561,15 +587,39 @@ chrome.downloads.onChanged.addListener((delta) => {
 // onChanged 이벤트를 놓쳐 이미 끝난 다운로드가 "진행 중"으로 남은 경우도 여기서 정리됨
 let lastStatusLogAt = 0;
 async function checkStalledDownloads() {
-  if (downloadToItemMap.size === 0 && downloadQueue.length === 0) return;
+  if (downloadToItemMap.size === 0 && downloadQueue.length === 0 && startingItems.size === 0) return;
   const now = Date.now();
   if (now - lastStatusLogAt >= STATUS_LOG_INTERVAL) {
     lastStatusLogAt = now;
     debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent}), 대기열 ${downloadQueue.length}개, 배치 ${batchMap.size}개`);
   }
 
+  // 브라우저가 다운로드를 시작해 주지 않는 항목 → 이번 시도를 포기 (늦게 시작되면 startDownload에서 취소)
+  for (const item of Array.from(startingItems)) {
+    if (now - item.attemptStartedAt <= START_TIMEOUT) continue;
+    startingItems.delete(item);
+    item.attempt++;
+    debugLog(`시작 안 됨: ${item.filename} (${Math.round((now - item.attemptStartedAt) / 1000)}초 동안 브라우저가 다운로드를 시작하지 않음) → ${item.cancelled ? '취소' : '재시도'}`);
+    if (item.cancelled) finishItem(item, 'cancelled', 'CANCELLED');
+    else retryOrFail(item, 'START_TIMEOUT');
+  }
+
   for (const [downloadId, item] of Array.from(downloadToItemMap)) {
-    if (item.status !== 'in_progress' || item.stalled) continue;
+    if (item.status !== 'in_progress') continue;
+    // 취소를 요청했는데 브라우저가 끝났다고 알려주지 않음 → 알림을 기다리지 않고 확정
+    if (item.cancelled && item.cancelRequestedAt && now - item.cancelRequestedAt > CANCEL_CONFIRM_TIMEOUT) {
+      debugLog(`취소 확인 없음 #${downloadId}: ${item.filename} → 취소로 처리`);
+      finishItem(item, 'cancelled', 'CANCELLED');
+      continue;
+    }
+    if (item.stalled) {
+      // 멈춰서 취소했는데 브라우저가 끝났다고 알려주지 않음 → 기다리지 않고 재시도로 넘어감
+      if (now - item.stalledAt > CANCEL_CONFIRM_TIMEOUT) {
+        debugLog(`멈춘 다운로드 취소 확인 없음 #${downloadId}: ${item.filename} → 재시도로 넘어감`);
+        handleDownloadError(downloadId, 'STALLED');
+      }
+      continue;
+    }
     let info;
     try {
       [info] = await browser.downloads.search({ id: downloadId });
@@ -588,9 +638,11 @@ async function checkStalledDownloads() {
       debugLog(`중단 이벤트 누락 #${downloadId}: ${item.filename}`);
       handleDownloadError(downloadId, info.error || 'INTERRUPTED');
     } else if (info.paused) {
-      // 사용자가 일시정지한 다운로드는 멈춘 것으로 보지 않음
+      // 사용자가 일시정지한 다운로드는 멈춘 것으로 보지 않음 (상태 로그에는 표시)
+      item.paused = true;
       item.lastProgressAt = now;
     } else if (info.bytesReceived !== item.lastBytes) {
+      item.paused = false;
       item.lastBytes = info.bytesReceived;
       item.lastProgressAt = now;
     } else if (now - item.lastProgressAt > (info.bytesReceived > 0 ? STALL_TIMEOUT : NO_RESPONSE_TIMEOUT)) {
@@ -598,6 +650,7 @@ async function checkStalledDownloads() {
       const reason = info.bytesReceived > 0 ? `${info.bytesReceived} bytes에서 변화 없음` : '서버 응답 없음';
       debugLog(`멈춤 감지 #${downloadId}: ${item.filename} (${Math.round((now - item.lastProgressAt) / 1000)}초 동안 ${reason}) → 취소 후 재시도`);
       item.stalled = true;
+      item.stalledAt = now;
       browser.downloads.cancel(downloadId).catch((error) => {
         console.warn('Stalled download cancel failed:', error);
         item.stalled = false;

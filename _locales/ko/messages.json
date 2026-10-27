@@ -197,6 +197,18 @@
   "update_notes_imp": {
     "message": "개선된 기능"
   },
+  "update_notes_v133_preview_title": {
+    "message": "원본이 없는 파일은 미리보기 이미지로 다운로드"
+  },
+  "update_notes_v133_preview_desc": {
+    "message": "사이트에 원본이 없고 미리보기만 남은 파일(preview_only)은 받을 수 없는 원본 주소 대신 미리보기(썸네일) 이미지로 받습니다. 이런 파일이 있으면 알림으로 알려주며, 작가 일괄 다운로드에서는 한 번만 알리고 계속 진행합니다."
+  },
+  "update_notes_v133_stuck_title": {
+    "message": "재시도할 파일이 오래 진행되지 않던 문제 수정"
+  },
+  "update_notes_v133_stuck_desc": {
+    "message": "브라우저가 다운로드를 30초 안에 시작하지 않거나(저장 위치가 NAS일 때 등), 멈춘 다운로드를 취소했는데 브라우저가 취소 완료를 알려주지 않으면 그 파일이 자리를 계속 차지해 다른 파일까지 멈추던 문제를 수정했습니다. 이제 이런 경우에도 다음 파일로 넘어가고 해당 파일은 다시 시도합니다."
+  },
   "update_notes_v132_exclude_title": {
     "message": "작가 일괄 다운로드에서 키워드로 게시글 제외"
   },
@@ -427,6 +439,18 @@
   },
   "notify_batch_stats_cancelled": {
     "message": "$1/$2개 받음, $3개 취소"
+  },
+  "notify_preview_only_title": {
+    "message": "원본이 없는 파일이 있습니다"
+  },
+  "notify_preview_only_body": {
+    "message": "사이트에 원본이 없는 파일은 미리보기(썸네일) 이미지로 받습니다. 원본보다 화질이 낮을 수 있습니다."
+  },
+  "notify_preview_only_count": {
+    "message": "미리보기로 받는 파일 $1개"
+  },
+  "notify_preview_only_once": {
+    "message": "이 안내는 이번 일괄 다운로드에서 한 번만 표시됩니다."
   },
   "notify_creator_waiting": {
     "message": "다운로드가 끝나기를 기다리는 중…"

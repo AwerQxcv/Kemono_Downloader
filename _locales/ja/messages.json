@@ -197,6 +197,18 @@
   "update_notes_imp": {
     "message": "改善された機能"
   },
+  "update_notes_v133_preview_title": {
+    "message": "元ファイルがないファイルはプレビュー画像でダウンロード"
+  },
+  "update_notes_v133_preview_desc": {
+    "message": "サイトに元ファイルがなくプレビューだけが残っているファイル (preview_only) は、ダウンロードできない元ファイルのアドレスの代わりにプレビュー (サムネイル) 画像でダウンロードします。該当するファイルがあると通知し、作者の一括ダウンロードでは 1 回だけ通知してそのまま続行します。"
+  },
+  "update_notes_v133_stuck_title": {
+    "message": "再試行するファイルが長時間進まない問題を修正"
+  },
+  "update_notes_v133_stuck_desc": {
+    "message": "ブラウザが 30 秒以内にダウンロードを開始しない場合 (保存先が NAS のときなど) や、止まったダウンロードをキャンセルしてもブラウザがキャンセル完了を知らせない場合、そのファイルが枠を占有し続けて他のファイルまで止まる問題を修正しました。このような場合も次のファイルに進み、そのファイルは再試行します。"
+  },
   "update_notes_v132_exclude_title": {
     "message": "作者の一括ダウンロードでキーワードによる投稿の除外"
   },
@@ -427,6 +439,18 @@
   },
   "notify_batch_stats_cancelled": {
     "message": "$1/$2 件ダウンロード、$3 件キャンセル"
+  },
+  "notify_preview_only_title": {
+    "message": "元ファイルがないファイルがあります"
+  },
+  "notify_preview_only_body": {
+    "message": "サイトに元ファイルがないファイルは、プレビュー (サムネイル) 画像としてダウンロードします。元ファイルより画質が低い場合があります。"
+  },
+  "notify_preview_only_count": {
+    "message": "プレビューでダウンロードするファイル $1 件"
+  },
+  "notify_preview_only_once": {
+    "message": "この案内は今回の一括ダウンロードで 1 回だけ表示されます。"
   },
   "notify_creator_waiting": {
     "message": "ダウンロードの完了を待っています…"
