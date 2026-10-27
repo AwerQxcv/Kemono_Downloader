@@ -398,9 +398,16 @@ function dlText(batchId, usedNames) {
     const blob2 = new Blob([text], { type: "text/plain" });
     filename = makeUniqueInBatch(convertMacrosInPath(txtBasePath + "/" + txtTextPath) + ".txt", usedNames);
 
+    // isText: 본문 텍스트 파일은 게시글 성공 여부 집계에서 따로 취급 (event_page.js의 checkBatchCompletion 참고)
     if (isChromium() == true) {
       const blob3 = URL.createObjectURL(blob2);
-      dlFile("download", blob3, filename, batchId);
+      chrome.runtime.sendMessage({
+        type: "download",
+        url: blob3,
+        filename: filename,
+        batchId: batchId,
+        isText: true,
+      });
       //URL.revokeObjectURL(blob3)
     } else {
       chrome.runtime.sendMessage({
@@ -408,6 +415,7 @@ function dlText(batchId, usedNames) {
         blob: blob2,
         filename: filename,
         batchId: batchId,
+        isText: true,
       });
     }
   }
