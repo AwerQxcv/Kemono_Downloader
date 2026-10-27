@@ -702,6 +702,15 @@ async function downloadCreator(str, page) {
   creatorRun = run;
   debugLog(`작가 일괄 다운로드 시작: 게시글 ${ids.length}개 (제외 ${excluded}개)`);
   run.postUrl = (pageID) => `${location.origin}/${page.service}/user/${page.userID}/post/${pageID}`;
+  // 진행 알림 = 기본 문구(run.baseText) + 멈춘 이유(run.stateLine). 취소 중에는 취소 문구가 대신 표시됨
+  run.baseText = '';
+  run.stateLine = '';
+  run.render = () => {
+    if (run.cancelled || creatorRun !== run) return;
+    run.progress.update(run.baseText + (run.stateLine ? '\n' + run.stateLine : ''));
+  };
+  // 2초마다 백그라운드 상태를 보고 멈춘 이유를 알림에 표시 (콘솔에는 15초마다)
+  let lastStatusLog = 0;
   run.statusTimer = setInterval(async () => {
     let status;
     try {
@@ -710,8 +719,19 @@ async function downloadCreator(str, page) {
       return;
     }
     if (!status || creatorRun !== run) return;
-    debugLog(`백그라운드: 진행 ${status.active}/${status.max} (그중 재시도 ${status.activeRetries}), 대기열 ${status.queued}, 재시도 줄 ${status.retrying}${status.paused > 0 ? `, 실패가 몰려 ${Math.ceil(status.paused / 1000)}초 쉬는 중` : ''}, 남은 게시글 배치 ${run.pendingBatchIds.size}`);
-  }, 15000);
+    if (status.paused > 0) {
+      run.stateLine = chrome.i18n.getMessage('notify_status_paused', [Math.ceil(status.paused / 1000).toString()]);
+    } else if (run.waitingForRoom) {
+      run.stateLine = chrome.i18n.getMessage('notify_status_queue_full', [status.queued.toString(), status.retrying.toString()]);
+    } else {
+      run.stateLine = '';
+    }
+    run.render();
+    if (Date.now() - lastStatusLog >= 15000) {
+      lastStatusLog = Date.now();
+      debugLog(`백그라운드: 진행 ${status.active}/${status.max} (그중 재시도 ${status.activeRetries}), 대기열 ${status.queued}, 재시도 줄 ${status.retrying}${status.paused > 0 ? `, 실패가 몰려 ${Math.ceil(status.paused / 1000)}초 쉬는 중` : ''}, 남은 게시글 배치 ${run.pendingBatchIds.size}`);
+    }
+  }, 2000);
 
   // "확장 기록" 건너뛰기 모드면 이미 모두 받은 게시글은 API 요청 없이 바로 건너뜀
   // (브라우저 기록 모드는 지운 파일을 다시 받기 위한 것이라 파일마다 확인)
@@ -726,7 +746,8 @@ async function downloadCreator(str, page) {
     const entry = work[w];
     const pageID = entry.id;
     const label = `[${entry.index + 1}/${run.total}]${entry.tries > 0 ? ` (재시도 ${entry.tries}/${CREATOR_POST_RETRY})` : ''}`;
-    run.progress.update(chrome.i18n.getMessage('notify_creator_progress', [Math.min(w + 1, run.total).toString(), run.total.toString()]));
+    run.baseText = chrome.i18n.getMessage('notify_creator_progress', [Math.min(w + 1, run.total).toString(), run.total.toString()]);
+    run.render();
 
     const record = donePosts[postRecordKey(pageID)];
     if (record && record.status === 'complete') {
@@ -780,7 +801,8 @@ async function downloadCreator(str, page) {
   debugLog(`게시글 전송 끝 (보낸 게시글 ${run.sent}개, 불러오기 실패 ${run.fetchFailed}개${run.cancelled ? ', 취소됨' : ''}). 남은 배치 ${run.pendingBatchIds.size}개`);
   if (!run.cancelled) {
     // 남은 다운로드를 기다리는 동안에도 취소할 수 있음
-    run.progress.update(chrome.i18n.getMessage('notify_creator_waiting'));
+    run.baseText = chrome.i18n.getMessage('notify_creator_waiting');
+    run.render();
   }
   // 기다리는 동안 남은 파일 수를 알림에 표시하고, 15초마다 콘솔에 파일별 상태를 표시
   let waitTicks = 0;
@@ -793,8 +815,9 @@ async function downloadCreator(str, page) {
     }
     if (!status || creatorRun !== run || run.cancelled) return;
     const retrying = status.files.filter((file) => file.retryCount > 0).length;
-    run.progress.update(chrome.i18n.getMessage('notify_creator_waiting') + '\n' +
-      chrome.i18n.getMessage('notify_creator_waiting_files', [status.files.length.toString(), retrying.toString()]));
+    run.baseText = chrome.i18n.getMessage('notify_creator_waiting') + '\n' +
+      chrome.i18n.getMessage('notify_creator_waiting_files', [status.files.length.toString(), retrying.toString()]);
+    run.render();
     if (waitTicks++ % 3 === 0) {
       debugLog(`다운로드 완료 대기 중. 남은 배치 ${run.pendingBatchIds.size}개, 남은 파일 ${status.files.length}개 (재시도 중 ${retrying}개)` +
         status.files.map((file) => `\n  ${file.filename}: ${file.status}${file.retryCount > 0 ? ` (재시도 ${file.retryCount}/${status.maxRetry})` : ''}, 시도한 시간 ${Math.round(file.tryTime / 1000)}초`).join(''));
@@ -815,7 +838,20 @@ async function waitForQueueRoom(run) {
     } catch (error) {
       return; // 확인할 수 없으면 기다리지 않음
     }
-    if (!status || status.queued < CREATOR_QUEUE_LIMIT) return;
+    if (!status || status.queued < CREATOR_QUEUE_LIMIT) {
+      if (run.waitingForRoom) {
+        run.waitingForRoom = false;
+        run.stateLine = '';
+        run.render();
+      }
+      return;
+    }
+    if (!run.waitingForRoom) {
+      // 알림에 "대기열이 가득 차서 기다리는 중" 표시 (2초마다 갱신은 statusTimer가 함)
+      run.waitingForRoom = true;
+      run.stateLine = chrome.i18n.getMessage('notify_status_queue_full', [status.queued.toString(), status.retrying.toString()]);
+      run.render();
+    }
     if (!logged) {
       debugLog(`다운로드 대기열 ${status.queued}개 (진행 ${status.active}개) → 줄어들 때까지 다음 게시글을 기다림`);
       logged = true;
@@ -1158,6 +1194,12 @@ async function refreshPostProgress(batchId) {
   const retrying = status.files.filter((file) => file.retryCount > 0).length;
   let text = chrome.i18n.getMessage('notify_post_progress', [status.done.toString(), status.total.toString()]);
   if (retrying > 0) text += '\n' + chrome.i18n.getMessage('notify_post_retrying', [retrying.toString()]);
+  // 멈춰 있는 이유: 서버 과부하로 쉬는 중 / 받는 파일 없이 모두 차례를 기다리는 중
+  if (status.paused > 0) {
+    text += '\n' + chrome.i18n.getMessage('notify_status_paused', [Math.ceil(status.paused / 1000).toString()]);
+  } else if (status.files.length > 0 && status.files.every((file) => file.status === 'queued' || file.status === 'retrying')) {
+    text += '\n' + chrome.i18n.getMessage('notify_status_waiting_turn');
+  }
   entry.progress.update(text);
 }
 

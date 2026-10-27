@@ -247,7 +247,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         files.push({ filename: item.filename, status: item.paused && item.status === 'in_progress' ? 'paused' : item.status, retryCount: item.retryCount, tryTime: tryTime });
       }
     }
-    sendResponse({ files: files, maxRetry: maxRetry, total: total, done: done });
+    sendResponse({ files: files, maxRetry: maxRetry, total: total, done: done, paused: Math.max(0, pausedUntil - Date.now()) });
 
   } else if (request.type === "cancel-batches") {
     // 작가 일괄 다운로드 취소: 해당 배치의 남은 파일을 모두 취소

@@ -209,6 +209,12 @@
   "update_notes_v133_stuck_desc": {
     "message": "If the browser did not start a download within 30 seconds (for example when saving to a NAS), or never confirmed that a stalled download was cancelled, that file kept its slot and held up other files. Now the next files start and that file is retried. Files waiting to be retried now have their own line and use only one slot while new files are waiting, so files on an unresponsive server no longer slow down the rest. When many downloads fail in a short time, the server is treated as overloaded and new downloads pause for 15 seconds before continuing."
   },
+  "update_notes_v133_status_title": {
+    "message": "Progress notification shows why downloads are paused"
+  },
+  "update_notes_v133_status_desc": {
+    "message": "When downloads pause for a moment, the progress notification now says why: the queue is full and the next post is waiting, or the server looks overloaded and downloads are resting (with the time until they resume)."
+  },
   "update_notes_v132_exclude_title": {
     "message": "Exclude posts by keyword in creator downloads"
   },
@@ -451,6 +457,15 @@
   },
   "notify_preview_only_once": {
     "message": "This notice is shown only once per creator download."
+  },
+  "notify_status_paused": {
+    "message": "⏸ Server seems overloaded, pausing ($1s left)"
+  },
+  "notify_status_queue_full": {
+    "message": "⏸ Queue is full, waiting before the next post (queue $1 · retrying $2)"
+  },
+  "notify_status_waiting_turn": {
+    "message": "⏸ Waiting for earlier downloads to finish"
   },
   "notify_creator_waiting": {
     "message": "Waiting for downloads to finish…"
