@@ -616,10 +616,25 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
 // === 토스트 알림 시스템 ===
 function createToastContainer() {
   let container = document.getElementById('kd-toast-container');
-  if (container) return container;
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'kd-toast-container';
+  }
+  // 사이트가 페이지 이동 중 body/head를 다시 그리면서 컨테이너나 스타일을 지울 수 있음.
+  // 스타일이 <head>에서만 지워지면 알림이 스타일 없이 화면 오른쪽에 붙어 나오므로,
+  // 스타일을 컨테이너 안에 함께 넣고 호출할 때마다 둘 다 있는지 확인함
+  if (!container.querySelector('#kd-toast-style')) {
+    container.prepend(createToastStyle());
+  }
+  if (!container.isConnected) {
+    document.body.appendChild(container);
+  }
+  return container;
+}
 
-  // 스타일 주입
+function createToastStyle() {
   const style = document.createElement('style');
+  style.id = 'kd-toast-style';
   style.textContent = `
     #kd-toast-container {
       position: fixed;
@@ -726,12 +741,7 @@ function createToastContainer() {
       }
     }
   `;
-  document.head.appendChild(style);
-
-  container = document.createElement('div');
-  container.id = 'kd-toast-container';
-  document.body.appendChild(container);
-  return container;
+  return style;
 }
 
 function showToast(title, body, stats, type) {
