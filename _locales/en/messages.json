@@ -370,5 +370,14 @@
   },
   "notify_download_history_import_failed": {
     "message": "Could not read the file. Choose a history file exported from this extension."
+  },
+  "status_post_complete": {
+    "message": "Downloaded"
+  },
+  "status_post_partial": {
+    "message": "Downloaded (some files failed)"
+  },
+  "status_post_failed": {
+    "message": "Download failed"
   }
 }

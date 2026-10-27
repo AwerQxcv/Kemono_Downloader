@@ -885,3 +885,133 @@ function showBatchResultToast(result) {
     );
   }
 }
+
+// === 다운로드 기록 표시 ===
+// 게시글별 다운로드 결과(event_page.js의 downloadedPosts)를 페이지에 표시
+//   작가 페이지: 각 카드 오른쪽 아래에 ✓ / ⚠ / ✕
+//   게시글 페이지: 제목 옆에 상태와 날짜
+const STATUS_ICONS = { complete: '✓', partial: '⚠', failed: '✕' };
+let downloadedPosts = {};
+let renderStatusTimer = null;
+
+function postStatusText(record) {
+  const date = new Date(record.time || 0).toLocaleString();
+  return `${chrome.i18n.getMessage('status_post_' + record.status)} · ${date}`;
+}
+
+// 카드에 data-* 가 없으면 링크 주소에서 읽음
+function getCardPostKey(card) {
+  if (card.dataset.service && card.dataset.user && card.dataset.id) {
+    return `${card.dataset.service}/${card.dataset.user}/${card.dataset.id}`;
+  }
+  const link = card.querySelector('a[href*="/post/"]');
+  const match = link && link.getAttribute('href').match(/\/([^/]+)\/user\/([^/]+)\/post\/([a-zA-Z0-9-]+)/);
+  return match ? `${match[1]}/${match[2]}/${match[3]}` : null;
+}
+
+// 배지를 붙이거나 고치거나 뗌. 바뀐 게 없으면 DOM을 건드리지 않음 (MutationObserver가 다시 불리지 않도록)
+function applyStatusBadge(container, record, inline) {
+  let badge = container.querySelector(':scope > .kd-status-badge');
+  if (!record || !STATUS_ICONS[record.status]) {
+    if (badge) badge.remove();
+    container.classList.remove('kd-has-status');
+    return;
+  }
+  const className = `kd-status-badge kd-status-${record.status}${inline ? ' kd-status-inline' : ''}`;
+  const text = inline ? `${STATUS_ICONS[record.status]} ${postStatusText(record)}` : STATUS_ICONS[record.status];
+  const title = postStatusText(record);
+  if (badge && badge.className === className && badge.textContent === text && badge.title === title) return;
+
+  if (!badge) {
+    badge = document.createElement('span');
+    container.appendChild(badge);
+  }
+  badge.className = className;
+  badge.textContent = text;
+  badge.title = title;
+  if (!inline) container.classList.add('kd-has-status');
+}
+
+function renderDownloadStatus() {
+  ensureStatusStyle();
+
+  for (const card of document.querySelectorAll('article.post-card')) {
+    const key = getCardPostKey(card);
+    if (key) applyStatusBadge(card, downloadedPosts[key], false);
+  }
+
+  const page = parsePagePath();
+  const title = document.querySelector('h1.post__title');
+  if (page && page.pageID && title) {
+    applyStatusBadge(title, downloadedPosts[`${page.service}/${page.userID}/${page.pageID}`], true);
+  }
+}
+
+function scheduleRenderDownloadStatus() {
+  clearTimeout(renderStatusTimer);
+  renderStatusTimer = setTimeout(renderDownloadStatus, 200);
+}
+
+function ensureStatusStyle() {
+  if (document.getElementById('kd-status-style')) return;
+  const style = document.createElement('style');
+  style.id = 'kd-status-style';
+  style.textContent = `
+    article.post-card.kd-has-status {
+      position: relative;
+    }
+    .kd-status-badge {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      z-index: 2;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1;
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+    .kd-status-badge.kd-status-inline {
+      position: static;
+      display: inline-flex;
+      width: auto;
+      height: auto;
+      margin-left: 10px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: normal;
+      vertical-align: middle;
+      box-shadow: none;
+    }
+    .kd-status-complete { background: #2e9e5b; }
+    .kd-status-partial { background: #d68a00; }
+    .kd-status-failed { background: #d64545; }
+  `;
+  (document.head || document.documentElement).appendChild(style);
+}
+
+chrome.storage.local.get(['downloadedPosts'], (data) => {
+  downloadedPosts = data.downloadedPosts || {};
+  renderDownloadStatus();
+});
+
+// 다운로드가 끝나 기록이 바뀌면 바로 반영
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local' || !changes.downloadedPosts) return;
+  downloadedPosts = changes.downloadedPosts.newValue || {};
+  renderDownloadStatus();
+});
+
+// 페이지 이동(목록 넘기기 등)으로 카드가 새로 그려지면 다시 표시
+if (document.body) {
+  new MutationObserver(scheduleRenderDownloadStatus).observe(document.body, { childList: true, subtree: true });
+}

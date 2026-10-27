@@ -370,5 +370,14 @@
   },
   "notify_download_history_import_failed": {
     "message": "ファイルを読み込めませんでした。この拡張機能でエクスポートした記録ファイルを選択してください。"
+  },
+  "status_post_complete": {
+    "message": "ダウンロード済み"
+  },
+  "status_post_partial": {
+    "message": "ダウンロード済み（一部失敗）"
+  },
+  "status_post_failed": {
+    "message": "ダウンロード失敗"
   }
 }

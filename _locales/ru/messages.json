@@ -370,5 +370,14 @@
   },
   "notify_download_history_import_failed": {
     "message": "Не удалось прочитать файл. Выберите файл истории, экспортированный этим расширением."
+  },
+  "status_post_complete": {
+    "message": "Загружено"
+  },
+  "status_post_partial": {
+    "message": "Загружено (часть файлов с ошибкой)"
+  },
+  "status_post_failed": {
+    "message": "Ошибка загрузки"
   }
 }
