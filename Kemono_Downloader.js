@@ -27,6 +27,9 @@ const CREATOR_POST_INTERVAL = 500; // 작가 일괄 다운로드 시 게시글 �
 const RATE_LIMIT_RETRY = 5; // 429(요청 너무 많음)일 때 재시도 횟수
 const RATE_LIMIT_WAIT = 5000; // 429일 때 기본 대기 시간 (ms). 재시도할수록 늘어남
 const RATE_LIMIT_MAX_WAIT = 60000; // 429일 때 한 번에 기다리는 최대 시간 (Retry-After가 너무 길어도 이만큼만)
+// 정보를 불러오지 못한 게시글은 건너뛰고 다음 게시글을 먼저 받은 뒤, 목록 끝에서 이 횟수만큼 다시 시도
+const CREATOR_POST_RETRY = 2;
+const CREATOR_POST_RETRY_WAIT = 10000; // 실패한 게시글은 실패 후 최소 이만큼 지나서 다시 시도 (서버가 잠깐 응답하지 않는 경우)
 const CREATOR_QUEUE_LIMIT = 10; // 백그라운드 대기열에 이만큼 쌓여 있으면 줄어들 때까지 다음 게시글을 미룸
 const API_TIMEOUT = 30000; // API가 이 시간 안에 응답하지 않으면 실패 처리 (게시글 하나 때문에 일괄 다운로드가 멈추지 않도록)
 
@@ -668,37 +671,55 @@ async function downloadCreator(str, page) {
   const { selSkipDownloaded } = await browser.storage.local.get('selSkipDownloaded');
   const donePosts = selSkipDownloaded === 'record' ? await browser.storage.local.get(ids.map(postRecordKey)) : {};
 
-  for (const [i, pageID] of ids.entries()) {
+  // 실패한 게시글은 이 목록 끝에 다시 붙여서, 나머지 게시글을 먼저 처리한 뒤 다시 시도
+  const work = ids.map((id, index) => ({ id, index, tries: 0 }));
+  for (let w = 0; w < work.length; w++) {
     if (run.cancelled) break;
-    run.progress.update(chrome.i18n.getMessage('notify_creator_progress', [(i + 1).toString(), run.total.toString()]));
+    const entry = work[w];
+    const pageID = entry.id;
+    const label = `[${entry.index + 1}/${run.total}]${entry.tries > 0 ? ` (재시도 ${entry.tries}/${CREATOR_POST_RETRY})` : ''}`;
+    run.progress.update(chrome.i18n.getMessage('notify_creator_progress', [Math.min(w + 1, run.total).toString(), run.total.toString()]));
 
     const record = donePosts[postRecordKey(pageID)];
     if (record && record.status === 'complete') {
       run.skippedPosts++;
-      debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} 건너뜀 (이미 모두 받음)`);
+      debugLog(`${label} 게시글 ${pageID} 건너뜀 (이미 모두 받음)`);
       continue;
     }
 
     // 백그라운드에 받을 파일이 많이 쌓여 있으면 줄어들 때까지 기다렸다가 다음 게시글로
     try {
+      if (entry.failedAt) {
+        const waitMs = entry.failedAt + CREATOR_POST_RETRY_WAIT - Date.now();
+        if (waitMs > 0) {
+          debugLog(`${label} 게시글 ${pageID} 다시 시도까지 ${Math.ceil(waitMs / 1000)}초 대기`);
+          await sleep(waitMs, run.abort.signal);
+        }
+      }
       await waitForQueueRoom(run);
     } catch (error) {
       break; // 취소됨
     }
 
-    debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} 정보 요청`);
+    debugLog(`${label} 게시글 ${pageID} 정보 요청`);
     try {
       globalThis.postData = await fetchPostData(page.service, page.userID, pageID, run.abort.signal);
-      debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} "${postData.title}": 이미지 ${postData.images.length}개, 첨부파일 ${postData.attachments.length}개`);
+      debugLog(`${label} 게시글 ${pageID} "${postData.title}": 이미지 ${postData.images.length}개, 첨부파일 ${postData.attachments.length}개`);
       await downloadPost(str);
       run.sent++;
     } catch (error) {
       if (error instanceof CancelledError) break;
       console.error(`downloadCreator: post ${pageID} failed`, error);
-      debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} 실패: ${error.message || error}`);
-      run.fetchFailed++;
+      // 없는 게시글(404)은 다시 해도 소용없으므로 바로 실패. 그 외에는 뒤로 미뤘다가 다시 시도
+      if (!(error instanceof PostNotFoundError) && entry.tries < CREATOR_POST_RETRY) {
+        work.push({ ...entry, tries: entry.tries + 1, failedAt: Date.now() });
+        debugLog(`${label} 게시글 ${pageID} 실패: ${error.message || error} → 다음 게시글 먼저, 목록 끝에서 다시 시도`);
+      } else {
+        debugLog(`${label} 게시글 ${pageID} 실패: ${error.message || error}`);
+        run.fetchFailed++;
+      }
     }
-    if (i < ids.length - 1) {
+    if (w < work.length - 1) {
       try {
         await sleep(CREATOR_POST_INTERVAL, run.abort.signal);
       } catch (error) {

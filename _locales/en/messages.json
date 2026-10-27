@@ -216,10 +216,10 @@
     "message": "Pressing Cancel used to keep downloading every file already in the queue. Remaining and in-progress files are now cancelled too, and you can also cancel while waiting for downloads to finish."
   },
   "update_notes_v132_stall_title": {
-    "message": "Automatic retry for stalled downloads"
+    "message": "Failed downloads are retried later"
   },
   "update_notes_v132_stall_desc": {
-    "message": "A download is cancelled and started again if the server sends nothing for 30 seconds, or if it stops making progress for 1 minute. Post info requests that get no response are skipped after 30 seconds, so creator downloads no longer freeze."
+    "message": "A download is cancelled if the server sends nothing for 30 seconds or it stops making progress for 1 minute. A failed file frees its slot so the next files start first, then is retried from the end of the queue a little later. Posts whose info could not be loaded are skipped and retried at the end of the list, so one file or post no longer holds up a creator download."
   },
   "update_notes_v132_pace_title": {
     "message": "Up to 5 simultaneous downloads, faster skipping of downloaded posts"

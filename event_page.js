@@ -1,6 +1,8 @@
 // === 설정 ===
 const DEFAULT_MAX_RETRY = 5;
-const RETRY_DELAY = 3000; // 3초
+// 실패한 파일은 자리를 비우고(다음 파일이 먼저 시작됨) 이만큼 기다린 뒤 대기열 맨 뒤로 다시 넣음.
+// 서버가 잠깐 응답하지 않는 경우를 위해 재시도할수록 길게 기다림 (마지막 값이 최대)
+const RETRY_DELAYS = [5000, 15000, 30000, 60000];
 // 시작 후 이 시간 동안 한 바이트도 못 받으면 서버가 응답하지 않는 것으로 보고 취소 후 다시 시도
 const NO_RESPONSE_TIMEOUT = 30000; // 30초
 // 받는 도중 받은 양이 이 시간 동안 그대로면 멈춘 다운로드로 보고 취소 후 다시 시도
@@ -113,7 +115,7 @@ const downloadToItemMap = new Map();
 // === 다운로드 대기열 ===
 // maxConcurrent개까지만 동시에 진행하고, 나머지는 여기서 기다렸다가 앞의 파일이 끝나면 시작
 const downloadQueue = [];
-let activeDownloads = 0; // 자리를 차지하고 있는 항목 수 (시작 중, 진행 중, 재시도 대기 중)
+let activeDownloads = 0; // 자리를 차지하고 있는 항목 수 (시작 중, 진행 중). 재시도 대기 중인 항목은 자리를 비움
 
 
 //コンテキスト表示
@@ -371,6 +373,15 @@ function cancelItem(item) {
   // 'starting'은 download()가 끝난 뒤 startDownload에서 취소함
 }
 
+// 재시도 대기가 끝난 항목을 대기열 맨 뒤로 다시 넣음 (기다리는 동안 취소됐으면 cancelItem에서 이미 처리됨)
+function requeueItem(item) {
+  if (item.cancelled || item.status !== 'retrying') return;
+  item.status = 'queued';
+  downloadQueue.push(item);
+  debugLog(`재시도 대기열 추가: ${item.filename} (대기 ${downloadQueue.length}개, 진행 ${activeDownloads}/${maxConcurrent})`);
+  pumpQueue();
+}
+
 // 자리가 남아 있는 만큼 대기열의 파일을 시작
 function pumpQueue() {
   while (downloadQueue.length > 0 && activeDownloads < maxConcurrent) {
@@ -382,7 +393,7 @@ function pumpQueue() {
 }
 
 async function startDownload(item) {
-  // 재시도 대기 중에 취소된 경우
+  // 대기열에 있는 동안 취소된 경우 (보통은 cancelItem에서 대기열에서 빼므로 오지 않음)
   if (item.cancelled) {
     if (item.status !== 'cancelled') finishItem(item, 'cancelled', 'CANCELLED');
     return;
@@ -475,7 +486,7 @@ function handleDownloadError(downloadId, errorReason) {
     return;
   }
 
-  // 그 외 에러 → 재시도 (자리는 그대로 차지한 채 기다림)
+  // 그 외 에러 → 자리를 비워 다음 파일을 먼저 받고, 잠시 뒤 대기열 맨 뒤로 다시 넣어 재시도
   if (item.retryCount < maxRetry) {
     item.retryCount++;
     item.status = 'retrying';
@@ -484,9 +495,15 @@ function handleDownloadError(downloadId, errorReason) {
     // 기존 매핑 제거 (새 downloadId로 교체 예정)
     downloadToItemMap.delete(downloadId);
     item.downloadId = null;
+    if (item.holdsSlot) {
+      item.holdsSlot = false;
+      activeDownloads--;
+    }
 
-    debugLog(`오류 #${downloadId}: ${item.filename} (${errorReason}) → ${RETRY_DELAY / 1000}초 뒤 재시도 ${item.retryCount}/${maxRetry}`);
-    setTimeout(() => startDownload(item), RETRY_DELAY);
+    const delay = RETRY_DELAYS[Math.min(item.retryCount, RETRY_DELAYS.length) - 1];
+    debugLog(`오류 #${downloadId}: ${item.filename} (${errorReason}) → 다음 파일 먼저, ${delay / 1000}초 뒤 대기열 뒤에서 재시도 ${item.retryCount}/${maxRetry}`);
+    setTimeout(() => requeueItem(item), delay);
+    pumpQueue();
   } else {
     // 재시도 횟수 초과 → 실패 확정
     finishItem(item, 'failed', errorReason);
