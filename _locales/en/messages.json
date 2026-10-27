@@ -44,7 +44,7 @@
     "message": "Part of the path for saving images"
   },
   "options_thumbnail_text": {
-    "message": "Text for thumbnail files ($Thumbnail$)"
+    "message": "Text for thumbnail files ($$Thumbnail$$)"
   },
   "options_attachments_path": {
     "message": "Part of the path for saving attachments"
@@ -116,7 +116,7 @@
     "message": "Original attachment name"
   },
   "macro_desc_thumbnail": {
-    "message": "The \"Text for thumbnail files\" setting (default _Thumbnail) if the file is downloaded as a preview (thumbnail) instead of the original, otherwise empty. Example: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail"
+    "message": "The \"Text for thumbnail files\" setting (default _Thumbnail) if the file is downloaded as a preview (thumbnail) instead of the original, otherwise empty. Example: $$ImageCounter#3$$$$Thumbnail$$ → 001_Thumbnail"
   },
   "macro_desc_year": {
     "message": "Year"
@@ -176,7 +176,7 @@
     "message": "The second part of the path is for saving images. It may optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saving, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u>, <u>time macros</u>, and <u>image macros</u> can be used for this path."
   },
   "help_thumbnail_text": {
-    "message": "For files downloaded as previews (thumbnails) instead of originals, the <u>$Thumbnail$</u> macro is replaced with this text. For other files it is empty.<br/>Put $Thumbnail$ wherever you want in the image or attachment path.<ul><li>$ImageCounter#3$$Thumbnail$ + <b>_Thumbnail</b> → 001_Thumbnail</li><li>$Thumbnail$$ImageCounter#3$ + <b>Thumbnail_</b> → Thumbnail_001</li></ul>"
+    "message": "Enter the text that $$Thumbnail$$ is replaced with in the image path.<br/>Example) When $$Thumbnail$$ is \"_Thumbnail\" (default)<br/>Image path : $$ImageCounter#3$$$$Thumbnail$$<br/>Expected result : 001_Thumbnail<br/>When $$Thumbnail$$ is \"Thumbnail_\"<br/>Image path : $$Thumbnail$$$$ImageCounter#3$$<br/>Expected result : Thumbnail_001"
   },
   "help_attachments_path": {
     "message": "The second part of the path is for saving attachments. It can optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saved, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u>, <u>time macros</u>, and <u>attachment macros</u> can be used for this path."
@@ -216,7 +216,7 @@
     "message": "Files whose originals can't be downloaded are saved as previews"
   },
   "update_notes_v133_preview_desc": {
-    "message": "Files that only have a preview left on the site (preview_only) are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. Files brought over from kemono (origin is kemono) almost always fail because kemono's file server is down, so their images are downloaded as previews and other files are skipped. Turn off \"Don't download kemono-origin files as originals\" in Settings to download originals (on by default). A notification tells you when this happens; in creator downloads it appears only once and the download continues. Add the $Thumbnail$ macro to the image or attachment file name to mark these files with your own text (default _Thumbnail, e.g. $ImageCounter#3$$Thumbnail$ → 001_Thumbnail). Change the text with \"Text for thumbnail files\" in Settings."
+    "message": "Files that only have a preview left on the site (preview_only) are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. Files brought over from kemono (origin is kemono) almost always fail because kemono's file server is down, so their images are downloaded as previews and other files are skipped. Turn off \"Don't download kemono-origin files as originals\" in Settings to download originals (on by default). A notification tells you when this happens; in creator downloads it appears only once and the download continues. Add the $$Thumbnail$$ macro to the image or attachment file name to mark these files with your own text (default _Thumbnail, e.g. $$ImageCounter#3$$$$Thumbnail$$ → 001_Thumbnail). Change the text with \"Text for thumbnail files\" in Settings."
   },
   "update_notes_v133_stuck_title": {
     "message": "Fixed files waiting to be retried not making progress for a long time"
