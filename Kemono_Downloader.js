@@ -219,10 +219,15 @@ function classifyFiles(post) {
   const attachments = [];
   for (const file of files) {
     const name = decodeHtmlEntities(file.name || '');
+    // preview_only: 사이트에 원본이 없고 미리보기(썸네일)만 있는 파일. /data 주소로는 받을 수 없으므로
+    // 임시 주소(temp_url)가 없으면 썸네일 주소로 받음
+    const tempUrl = getTempUrl(file);
+    const previewOnly = file.preview_only === true && !tempUrl; // 썸네일로 받는 파일
     const entry = {
       url: getFileServer(file) + '/data' + file.path,
-      downloadUrl: getTempUrl(file), // 있으면 url 대신 이 주소로 다운로드
+      downloadUrl: tempUrl || (previewOnly ? getThumbnailUrl(file) : null), // 있으면 url 대신 이 주소로 다운로드
       name: name,
+      previewOnly: previewOnly,
     };
     (IMAGE_EXTENSIONS.has(getExtension(name || file.path)) ? images : attachments).push(entry);
   }
@@ -235,6 +240,11 @@ function getFileServer(file) {
   if (file.server) return file.server.replace(/\/+$/, '');
   if (file.node) return `https://n${file.node}.${location.hostname}`;
   return location.hostname.startsWith('pawchive.') ? `https://file.${location.hostname}` : location.origin;
+}
+
+// 미리보기(썸네일) 이미지 주소. 예: https://img.pawchive.pw/thumbnail/data/78/b5/78b5....jpg
+function getThumbnailUrl(file) {
+  return `https://img.${location.hostname}/thumbnail/data${file.path}`;
 }
 
 // 일부 게시글(preview_only 등)은 /data 경로 대신 서명된 임시 주소(temp_url)로만 받을 수 있음
@@ -587,6 +597,13 @@ async function downloadPost(str) {
 
   const usedNames = new Set(); // 이번 배치에서 이미 쓴 파일 경로 (makeUniqueInBatch 참고)
 
+  // 원본 없이 미리보기로 받는 파일이 있으면 알림 (작가 일괄 다운로드에서는 한 번만)
+  const previewCount = [
+    ...(str.cbDlImages == true ? postData.images : []),
+    ...(str.cbDlAttachments == true ? postData.attachments : []),
+  ].filter((file) => file.previewOnly).length;
+  if (previewCount > 0) warnPreviewOnly(previewCount);
+
   try {
     if (str.cbDlText == true) {
       dlText(batchId, usedNames); // dlText는 동기적으로 메시지를 보내므로 await 불필요
@@ -605,9 +622,23 @@ async function downloadPost(str) {
   return batchId;
 }
 
+function warnPreviewOnly(count) {
+  debugLog(`게시글 ${postData.pageID}: 원본이 없는 파일 ${count}개 → 미리보기(썸네일)로 받음`);
+  if (creatorRun) {
+    if (creatorRun.previewWarned) return;
+    creatorRun.previewWarned = true;
+  }
+  showToast(
+    '⚠️ ' + chrome.i18n.getMessage('notify_preview_only_title'),
+    chrome.i18n.getMessage('notify_preview_only_body'),
+    creatorRun ? chrome.i18n.getMessage('notify_preview_only_once') : chrome.i18n.getMessage('notify_preview_only_count', [count.toString()]),
+    'warning'
+  );
+}
+
 // === 작가 페이지 일괄 다운로드 ===
 // 진행 중인 작가 일괄 다운로드 상태. 없으면 null
-// { total, excluded, sent, fetchFailed, cancelled, abort, dispatchDone, pendingBatchIds, files, filesFailed, filesCancelled, progress, waitLogTimer, cancelTimer }
+// { total, excluded, sent, fetchFailed, cancelled, abort, dispatchDone, pendingBatchIds, skippedPosts, previewWarned, files, filesFailed, filesCancelled, progress, waitLogTimer, cancelTimer }
 let creatorRun = null;
 
 async function downloadCreator(str, page) {
@@ -657,6 +688,7 @@ async function downloadCreator(str, page) {
     dispatchDone: false,
     pendingBatchIds: new Set(),
     skippedPosts: 0,
+    previewWarned: false, // 원본 없는 파일 안내를 이미 띄웠는지
     files: 0,
     filesFailed: 0,
     filesCancelled: 0,

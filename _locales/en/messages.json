@@ -197,6 +197,12 @@
   "update_notes_imp": {
     "message": "Improvement"
   },
+  "update_notes_v133_preview_title": {
+    "message": "Files without an original are downloaded as previews"
+  },
+  "update_notes_v133_preview_desc": {
+    "message": "Files that only have a preview left on the site (preview_only) are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. A notification tells you when this happens; in creator downloads it appears only once and the download continues."
+  },
   "update_notes_v132_exclude_title": {
     "message": "Exclude posts by keyword in creator downloads"
   },
@@ -427,6 +433,18 @@
   },
   "notify_batch_stats_cancelled": {
     "message": "$1/$2 downloaded, $3 cancelled"
+  },
+  "notify_preview_only_title": {
+    "message": "Some files have no original"
+  },
+  "notify_preview_only_body": {
+    "message": "Files whose originals are not on the site are downloaded as preview (thumbnail) images. They may be lower quality than the original."
+  },
+  "notify_preview_only_count": {
+    "message": "$1 files downloaded as previews"
+  },
+  "notify_preview_only_once": {
+    "message": "This notice is shown only once per creator download."
   },
   "notify_creator_waiting": {
     "message": "Waiting for downloads to finish…"
