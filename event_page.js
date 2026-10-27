@@ -121,7 +121,12 @@ const downloadToItemMap = new Map();
 // === 다운로드 대기열 ===
 // maxConcurrent개까지만 동시에 진행하고, 나머지는 여기서 기다렸다가 앞의 파일이 끝나면 시작
 const downloadQueue = [];
+// 재시도할 파일은 따로 줄을 세움. 새 파일이 기다리는 동안에는 재시도 파일이 RETRY_SLOTS개 자리만 쓰므로,
+// 응답 없는 서버의 파일을 계속 다시 시도하느라 나머지 다운로드가 멈추지 않음 (새 파일이 없으면 모든 자리를 씀)
+const retryQueue = [];
+const RETRY_SLOTS = 1;
 let activeDownloads = 0; // 자리를 차지하고 있는 항목 수 (시작 중, 진행 중). 재시도 대기 중인 항목은 자리를 비움
+let activeRetries = 0; // 그중 재시도 중인 항목 수
 // 브라우저에 다운로드를 요청하고 아직 downloadId를 받지 못한 항목 (downloadToItemMap에 없으므로 따로 감시)
 const startingItems = new Set();
 
@@ -200,7 +205,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
   } else if (request.type === "queue-status") {
     // 작가 일괄 다운로드가 대기열이 줄 때까지 다음 게시글을 미루는 데 사용
-    sendResponse({ queued: downloadQueue.length, active: activeDownloads });
+    // 재시도 줄은 세지 않음 (재시도할 파일이 쌓여도 다음 게시글은 계속 받음)
+    sendResponse({ queued: downloadQueue.length, active: activeDownloads, retrying: retryQueue.length });
 
   } else if (request.type === "batch-status") {
     // 진행 상황 표시용: 게시글 하나 다운로드의 완료 수, 작가 일괄 다운로드 완료 대기 중의 남은 파일과 상태
@@ -235,7 +241,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     chrome.runtime.openOptionsPage(); //background.jsから発火する必要がある
   }
 
-  return true;
+  // 응답(sendResponse)은 모두 위에서 바로 보내므로 true를 돌려주지 않음.
+  // true를 돌려주면 응답이 필요 없는 메시지(download 등)마다 "Promised response ... went out of scope" 오류가 남
 });
 
 
@@ -394,8 +401,10 @@ function cancelItem(item) {
   item.cancelled = true;
   if (item.status === 'queued' || item.status === 'retrying') {
     // 아직 시작 전이거나 재시도 대기 중 → 바로 취소 처리
-    const index = downloadQueue.indexOf(item);
-    if (index !== -1) downloadQueue.splice(index, 1);
+    for (const queue of [downloadQueue, retryQueue]) {
+      const index = queue.indexOf(item);
+      if (index !== -1) queue.splice(index, 1);
+    }
     finishItem(item, 'cancelled', 'CANCELLED');
   } else if (item.status === 'in_progress' && item.downloadId !== null) {
     // 진행 중 → 브라우저 다운로드를 취소. onChanged(USER_CANCELED)에서 취소로 확정됨
@@ -409,22 +418,39 @@ function cancelItem(item) {
   // 'starting'은 download()가 끝난 뒤 startDownload에서 취소함 (끝나지 않으면 checkStalledDownloads에서 START_TIMEOUT 뒤에 처리)
 }
 
-// 재시도 대기가 끝난 항목을 대기열 맨 뒤로 다시 넣음 (기다리는 동안 취소됐으면 cancelItem에서 이미 처리됨)
+// 재시도 대기가 끝난 항목을 재시도 줄 맨 뒤에 넣음 (기다리는 동안 취소됐으면 cancelItem에서 이미 처리됨)
 function requeueItem(item) {
   if (item.cancelled || item.status !== 'retrying') return;
   item.status = 'queued';
-  downloadQueue.push(item);
-  debugLog(`재시도 대기열 추가: ${item.filename} (대기 ${downloadQueue.length}개, 진행 ${activeDownloads}/${maxConcurrent})`);
+  retryQueue.push(item);
+  debugLog(`재시도 줄 추가: ${item.filename} (재시도 줄 ${retryQueue.length}개, 대기 ${downloadQueue.length}개, 진행 ${activeDownloads}/${maxConcurrent})`);
   pumpQueue();
 }
 
-// 자리가 남아 있는 만큼 대기열의 파일을 시작
+// 자리가 남아 있는 만큼 파일을 시작. 재시도 파일은 새 파일이 기다리는 동안 RETRY_SLOTS개 자리까지만 씀
 function pumpQueue() {
-  while (downloadQueue.length > 0 && activeDownloads < maxConcurrent) {
-    const item = downloadQueue.shift();
+  while (activeDownloads < maxConcurrent) {
+    const retryAllowed = retryQueue.length > 0 && (activeRetries < RETRY_SLOTS || downloadQueue.length === 0);
+    let item;
+    if (retryAllowed) item = retryQueue.shift();
+    else if (downloadQueue.length > 0) item = downloadQueue.shift();
+    else break;
     item.holdsSlot = true;
     activeDownloads++;
+    item.retrySlot = item.retryCount > 0;
+    if (item.retrySlot) activeRetries++;
     startDownload(item);
+  }
+}
+
+// 항목이 차지하던 자리를 비움
+function releaseSlot(item) {
+  if (!item.holdsSlot) return;
+  item.holdsSlot = false;
+  activeDownloads--;
+  if (item.retrySlot) {
+    item.retrySlot = false;
+    activeRetries--;
   }
 }
 
@@ -498,10 +524,7 @@ function finishItem(item, status, error = null) {
   debugLog(`${status === 'complete' ? '완료' : status === 'cancelled' ? '취소' : '실패'}${item.downloadId !== null ? ` #${item.downloadId}` : ''}: ${item.filename}${error ? ` (${error})` : ''}`);
   markDownloaded(item.filename, status === 'complete');
   if (item.downloadId !== null) downloadToItemMap.delete(item.downloadId);
-  if (item.holdsSlot) {
-    item.holdsSlot = false;
-    activeDownloads--;
-  }
+  releaseSlot(item);
   if (item.batchId) checkBatchCompletion(item.batchId);
   pumpQueue();
 }
@@ -551,13 +574,10 @@ function retryOrFail(item, errorReason) {
     // 기존 매핑 제거 (새 downloadId로 교체 예정)
     if (downloadId !== null) downloadToItemMap.delete(downloadId);
     item.downloadId = null;
-    if (item.holdsSlot) {
-      item.holdsSlot = false;
-      activeDownloads--;
-    }
+    releaseSlot(item);
 
     const delay = RETRY_DELAYS[Math.min(item.retryCount, RETRY_DELAYS.length) - 1];
-    debugLog(`오류${downloadId !== null ? ` #${downloadId}` : ''}: ${item.filename} (${errorReason}) → 다음 파일 먼저, ${delay / 1000}초 뒤 대기열 뒤에서 재시도 ${item.retryCount}/${maxRetry}`);
+    debugLog(`오류${downloadId !== null ? ` #${downloadId}` : ''}: ${item.filename} (${errorReason}) → 다음 파일 먼저, ${delay / 1000}초 뒤 재시도 줄에서 재시도 ${item.retryCount}/${maxRetry}`);
     setTimeout(() => requeueItem(item), delay);
     pumpQueue();
   } else {
@@ -587,11 +607,11 @@ chrome.downloads.onChanged.addListener((delta) => {
 // onChanged 이벤트를 놓쳐 이미 끝난 다운로드가 "진행 중"으로 남은 경우도 여기서 정리됨
 let lastStatusLogAt = 0;
 async function checkStalledDownloads() {
-  if (downloadToItemMap.size === 0 && downloadQueue.length === 0 && startingItems.size === 0) return;
+  if (downloadToItemMap.size === 0 && downloadQueue.length === 0 && retryQueue.length === 0 && startingItems.size === 0) return;
   const now = Date.now();
   if (now - lastStatusLogAt >= STATUS_LOG_INTERVAL) {
     lastStatusLogAt = now;
-    debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent}), 대기열 ${downloadQueue.length}개, 배치 ${batchMap.size}개`);
+    debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent}, 그중 재시도 ${activeRetries}개), 대기열 ${downloadQueue.length}개, 재시도 줄 ${retryQueue.length}개, 배치 ${batchMap.size}개`);
   }
 
   // 브라우저가 다운로드를 시작해 주지 않는 항목 → 이번 시도를 포기 (늦게 시작되면 startDownload에서 취소)
