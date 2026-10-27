@@ -22,14 +22,19 @@ const MAX_CONCURRENT_LIMIT = 5;
 let maxConcurrent = DEFAULT_MAX_CONCURRENT;
 // 이미 받은 파일 건너뛰기 방식
 //   "off": 건너뛰지 않음
-//   "record": 확장이 직접 남긴 기록(downloadedFiles) 기준. 성공하면 기록하고 실패하면 지움 (기록은 방식과 상관없이 항상 남김)
+//   "record": 확장이 직접 남긴 기록(f: 항목) 기준. 성공하면 기록하고 실패하면 지움 (기록은 방식과 상관없이 항상 남김)
 //   "history": 브라우저 다운로드 기록에 같은 경로로 완료된 다운로드가 있고 파일이 아직 남아 있으면 건너뜀
 const SKIP_MODES = ['off', 'record', 'history'];
 let skipMode = 'off';
 const downloadedFiles = new Set();
-// 게시글별 마지막 다운로드 결과 { "service/user/post": { status: 'complete' | 'partial' | 'failed', time } }
-// 게시글 / 작가 페이지에서 받은 적 있는지 표시할 때 사용
-const downloadedPosts = new Map();
+// 받은 파일 / 게시글 기록은 항목마다 따로 저장함 (기록이 수천 개여도 바뀐 것만 쓰고, 다른 탭에도 바뀐 것만 전달되도록)
+//   "f:<저장 경로>" = 1
+//   "p:<service/user/post>" = { status: 'complete' | 'partial' | 'failed', time }  게시글별 마지막 다운로드 결과
+// 예전 버전은 downloadedFiles(배열) / downloadedPosts(객체) 한 덩어리로 저장했으므로 처음 실행할 때 옮김
+const FILE_RECORD_PREFIX = 'f:';
+const POST_RECORD_PREFIX = 'p:';
+const pendingRecordWrites = {};
+const pendingRecordRemovals = new Set();
 let saveRecordsTimer = null;
 
 // 0은 "재시도 안 함"을 뜻하는 유효한 값이므로 || 대신 NaN/음수일 때만 기본값 사용
@@ -54,15 +59,18 @@ function parseConflictAction(value) {
 }
 
 // storage에서 재시도 횟수 / 중복 파일 처리 방식 / 최대 동시 다운로드 수 로드
-chrome.storage.local.get(['numRetryCount', 'selConflictAction', 'numMaxConcurrent', 'selSkipDownloaded', 'downloadedFiles', 'downloadedPosts'], (data) => {
+chrome.storage.local.get(null, (data) => {
   if (data.numRetryCount !== undefined) {
     maxRetry = parseRetryCount(data.numRetryCount);
   }
   conflictAction = parseConflictAction(data.selConflictAction);
   maxConcurrent = parseMaxConcurrent(data.numMaxConcurrent);
   skipMode = parseSkipMode(data.selSkipDownloaded);
-  mergeDownloadedFiles(data.downloadedFiles);
-  mergeDownloadedPosts(data.downloadedPosts);
+  for (const key of Object.keys(data)) {
+    if (key.startsWith(FILE_RECORD_PREFIX)) downloadedFiles.add(key.substring(FILE_RECORD_PREFIX.length));
+  }
+  migrateOldRecords(data);
+  debugLog(`받은 파일 기록 ${downloadedFiles.size}개 불러옴`);
   pumpQueue();
 });
 
@@ -78,17 +86,13 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (changes.selSkipDownloaded) {
     skipMode = parseSkipMode(changes.selSkipDownloaded.newValue);
   }
-  // 설정 페이지의 "기록 지우기"는 빈 값을, "기록 가져오기"는 합친 기록을 저장함
-  // (자기가 저장한 값도 여기로 오지만 이미 가진 항목이라 합쳐도 그대로)
-  if (changes.downloadedFiles) {
-    const files = changes.downloadedFiles.newValue;
-    if (Array.isArray(files) && files.length === 0) downloadedFiles.clear();
-    else mergeDownloadedFiles(files);
-  }
-  if (changes.downloadedPosts) {
-    const posts = changes.downloadedPosts.newValue;
-    if (posts && typeof posts === 'object' && Object.keys(posts).length === 0) downloadedPosts.clear();
-    else mergeDownloadedPosts(posts);
+  // 설정 페이지의 "기록 지우기"(삭제)와 "기록 가져오기"(추가)를 반영
+  // (자기가 저장한 항목도 여기로 오지만 이미 같은 상태라 그대로)
+  for (const [key, change] of Object.entries(changes)) {
+    if (!key.startsWith(FILE_RECORD_PREFIX)) continue;
+    const fileKey = key.substring(FILE_RECORD_PREFIX.length);
+    if (change.newValue === undefined) downloadedFiles.delete(fileKey);
+    else downloadedFiles.add(fileKey);
   }
   if (changes.numMaxConcurrent) {
     maxConcurrent = parseMaxConcurrent(changes.numMaxConcurrent.newValue);
@@ -203,47 +207,70 @@ function downloadedKey(filename) {
   return filename.replace(/\\/g, '/').toLowerCase();
 }
 
-function mergeDownloadedFiles(files) {
-  if (!Array.isArray(files)) return;
-  for (const key of files) {
-    if (typeof key === 'string') downloadedFiles.add(key);
+// 예전 한 덩어리 기록(downloadedFiles 배열, downloadedPosts 객체)을 항목별 키로 옮기고 지움
+function migrateOldRecords(data) {
+  const writes = {};
+  if (Array.isArray(data.downloadedFiles)) {
+    for (const fileKey of data.downloadedFiles) {
+      if (typeof fileKey !== 'string') continue;
+      downloadedFiles.add(fileKey);
+      writes[FILE_RECORD_PREFIX + fileKey] = 1;
+    }
   }
+  if (data.downloadedPosts && typeof data.downloadedPosts === 'object') {
+    for (const [postKey, record] of Object.entries(data.downloadedPosts)) {
+      if (record && typeof record.status === 'string') writes[POST_RECORD_PREFIX + postKey] = record;
+    }
+  }
+  if (data.downloadedFiles === undefined && data.downloadedPosts === undefined) return;
+  debugLog(`예전 기록 옮김: ${Object.keys(writes).length}개`);
+  chrome.storage.local.set(writes, () => {
+    chrome.storage.local.remove(['downloadedFiles', 'downloadedPosts']);
+  });
 }
 
-// 같은 게시글이면 더 나중 기록을 남김
-function mergeDownloadedPosts(posts) {
-  if (!posts || typeof posts !== 'object') return;
-  for (const [key, record] of Object.entries(posts)) {
-    if (!record || typeof record.status !== 'string') continue;
-    const current = downloadedPosts.get(key);
-    if (!current || (record.time || 0) > (current.time || 0)) downloadedPosts.set(key, record);
-  }
-}
-
-// 파일마다 저장하면 일괄 다운로드 때 너무 자주 쓰므로 모아서 저장
+// 파일마다 저장하면 일괄 다운로드 때 너무 자주 쓰므로 바뀐 항목만 모아서 저장
 function scheduleSaveRecords() {
-  clearTimeout(saveRecordsTimer);
+  if (saveRecordsTimer) return;
   saveRecordsTimer = setTimeout(() => {
-    chrome.storage.local.set({
-      downloadedFiles: Array.from(downloadedFiles),
-      downloadedPosts: Object.fromEntries(downloadedPosts),
-    });
-  }, 1000);
+    saveRecordsTimer = null;
+    const writes = Object.assign({}, pendingRecordWrites);
+    const removals = Array.from(pendingRecordRemovals);
+    for (const key of Object.keys(pendingRecordWrites)) delete pendingRecordWrites[key];
+    pendingRecordRemovals.clear();
+    if (Object.keys(writes).length > 0) chrome.storage.local.set(writes);
+    if (removals.length > 0) chrome.storage.local.remove(removals);
+  }, 2000);
+}
+
+function writeRecord(key, value) {
+  pendingRecordRemovals.delete(key);
+  pendingRecordWrites[key] = value;
+  scheduleSaveRecords();
+}
+
+function removeRecord(key) {
+  delete pendingRecordWrites[key];
+  pendingRecordRemovals.add(key);
+  scheduleSaveRecords();
 }
 
 function markDownloaded(filename, done) {
   const key = downloadedKey(filename);
   if (done ? downloadedFiles.has(key) : !downloadedFiles.has(key)) return;
-  if (done) downloadedFiles.add(key);
-  else downloadedFiles.delete(key);
-  scheduleSaveRecords();
+  if (done) {
+    downloadedFiles.add(key);
+    writeRecord(FILE_RECORD_PREFIX + key, 1);
+  } else {
+    downloadedFiles.delete(key);
+    removeRecord(FILE_RECORD_PREFIX + key);
+  }
 }
 
 // 게시글 하나(배치)의 결과 기록. 받을 파일이 없던 게시글은 기록하지 않음
 function markPost(postKey, success, failed) {
   const status = failed === 0 ? 'complete' : success > 0 ? 'partial' : 'failed';
-  downloadedPosts.set(postKey, { status: status, time: Date.now() });
-  scheduleSaveRecords();
+  writeRecord(POST_RECORD_PREFIX + postKey, { status: status, time: Date.now() });
 }
 
 

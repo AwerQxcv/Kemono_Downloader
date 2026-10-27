@@ -553,12 +553,35 @@ function toggleWarning(inputId, show) {
 
 document.getElementById("reset").addEventListener("click", initialize_settings);
 
-// 이미 받은 파일 기록 지우기 (빈 값을 저장하면 백그라운드가 기록을 비움)
+// 받은 파일 / 게시글 기록은 항목마다 따로 저장됨 (event_page.js 참고)
+//   "f:<저장 경로>" = 1, "p:<service/user/post>" = { status, time }
+// 예전 버전의 한 덩어리 기록(downloadedFiles, downloadedPosts)은 백그라운드가 옮기지만, 옮기기 전이어도 함께 읽음
+const FILE_RECORD_PREFIX = "f:";
+const POST_RECORD_PREFIX = "p:";
+const LEGACY_RECORD_KEYS = ["downloadedFiles", "downloadedPosts"];
+
+function readRecords(data) {
+  const files = new Set(Array.isArray(data.downloadedFiles) ? data.downloadedFiles : []);
+  const posts = Object.assign({}, data.downloadedPosts && typeof data.downloadedPosts === "object" ? data.downloadedPosts : {});
+  for (const [key, value] of Object.entries(data)) {
+    if (key.startsWith(FILE_RECORD_PREFIX)) files.add(key.substring(FILE_RECORD_PREFIX.length));
+    else if (key.startsWith(POST_RECORD_PREFIX)) posts[key.substring(POST_RECORD_PREFIX.length)] = value;
+  }
+  return { files: Array.from(files), posts: posts };
+}
+
+function isRecordKey(key) {
+  return key.startsWith(FILE_RECORD_PREFIX) || key.startsWith(POST_RECORD_PREFIX) || LEGACY_RECORD_KEYS.includes(key);
+}
+
+// 이미 받은 파일 기록 지우기 (항목을 지우면 백그라운드도 storage.onChanged로 기록을 비움)
 document.getElementById("clearDownloadHistory").addEventListener("click", () => {
   const i18n = (typeof browser !== 'undefined') ? browser.i18n : chrome.i18n;
   if (!confirm(i18n.getMessage("confirm_clear_download_history"))) return;
-  chrome.storage.local.set({ downloadedFiles: [], downloadedPosts: {} }, () => {
-    alert(i18n.getMessage("notify_download_history_cleared"));
+  chrome.storage.local.get(null, (data) => {
+    chrome.storage.local.remove(Object.keys(data).filter(isRecordKey), () => {
+      alert(i18n.getMessage("notify_download_history_cleared"));
+    });
   });
 });
 
@@ -566,13 +589,14 @@ document.getElementById("clearDownloadHistory").addEventListener("click", () => 
 const HISTORY_FILE_FORMAT = "kemono-downloader-history";
 
 document.getElementById("exportDownloadHistory").addEventListener("click", () => {
-  chrome.storage.local.get(["downloadedFiles", "downloadedPosts"], (data) => {
+  chrome.storage.local.get(null, (data) => {
+    const records = readRecords(data);
     const history = {
       format: HISTORY_FILE_FORMAT,
       version: 1,
       exported: new Date().toISOString(),
-      files: Array.isArray(data.downloadedFiles) ? data.downloadedFiles : [],
-      posts: data.downloadedPosts && typeof data.downloadedPosts === "object" ? data.downloadedPosts : {},
+      files: records.files,
+      posts: records.posts,
     };
     const blob = new Blob([JSON.stringify(history)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -609,23 +633,20 @@ document.getElementById("importDownloadHistoryFile").addEventListener("change", 
   const importedFiles = (Array.isArray(history.files) ? history.files : [])
     .filter((key) => typeof key === "string")
     .map((key) => key.replace(/\\/g, "/").toLowerCase());
-  const importedPosts = history.posts && typeof history.posts === "object" ? history.posts : {};
+  const importedPosts = Object.entries(history.posts && typeof history.posts === "object" ? history.posts : {})
+    .filter(([, record]) => record && typeof record.status === "string");
 
-  chrome.storage.local.get(["downloadedFiles", "downloadedPosts"], (data) => {
-    const files = new Set(Array.isArray(data.downloadedFiles) ? data.downloadedFiles : []);
-    for (const key of importedFiles) files.add(key);
-
-    const posts = Object.assign({}, data.downloadedPosts);
-    let postCount = 0;
-    for (const [key, record] of Object.entries(importedPosts)) {
-      if (!record || typeof record.status !== "string") continue;
-      postCount++;
-      const current = posts[key];
-      if (!current || (record.time || 0) > (current.time || 0)) posts[key] = record;
+  // 같은 게시글은 지금 기록과 비교해야 하므로 해당 항목만 읽음
+  chrome.storage.local.get(importedPosts.map(([key]) => POST_RECORD_PREFIX + key), (current) => {
+    const writes = {};
+    for (const key of importedFiles) writes[FILE_RECORD_PREFIX + key] = 1;
+    for (const [key, record] of importedPosts) {
+      const existing = current[POST_RECORD_PREFIX + key];
+      if (!existing || (record.time || 0) > (existing.time || 0)) writes[POST_RECORD_PREFIX + key] = record;
     }
 
-    chrome.storage.local.set({ downloadedFiles: Array.from(files), downloadedPosts: posts }, () => {
-      alert(i18n.getMessage("notify_download_history_imported", [importedFiles.length.toString(), postCount.toString()]));
+    chrome.storage.local.set(writes, () => {
+      alert(i18n.getMessage("notify_download_history_imported", [importedFiles.length.toString(), importedPosts.length.toString()]));
     });
   });
 });

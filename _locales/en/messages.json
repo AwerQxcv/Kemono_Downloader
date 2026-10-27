@@ -227,6 +227,12 @@
   "update_notes_v132_pace_desc": {
     "message": "Simultaneous downloads are now limited to 1–5 so the server does not drop connections (the old 0 becomes 5). Creator downloads wait for the download queue to shrink before moving on to the next post, and in 'extension record' mode posts that were fully downloaded are skipped right away without loading their info."
   },
+  "update_notes_v132_records_title": {
+    "message": "Lighter download history storage"
+  },
+  "update_notes_v132_records_desc": {
+    "message": "Downloaded file and post records are now stored one by one, so the browser no longer slows down during downloads even with thousands of records. Existing records are moved over automatically."
+  },
   "update_notes_v131_skip_title": {
     "message": "Skip files that were already downloaded"
   },

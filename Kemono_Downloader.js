@@ -655,14 +655,15 @@ async function downloadCreator(str, page) {
 
   // "확장 기록" 건너뛰기 모드면 이미 모두 받은 게시글은 API 요청 없이 바로 건너뜀
   // (브라우저 기록 모드는 지운 파일을 다시 받기 위한 것이라 파일마다 확인)
-  const skipData = await browser.storage.local.get(['selSkipDownloaded', 'downloadedPosts']);
-  const donePosts = skipData.selSkipDownloaded === 'record' ? (skipData.downloadedPosts || {}) : {};
+  const postRecordKey = (pageID) => POST_RECORD_PREFIX + `${page.service}/${page.userID}/${pageID}`;
+  const { selSkipDownloaded } = await browser.storage.local.get('selSkipDownloaded');
+  const donePosts = selSkipDownloaded === 'record' ? await browser.storage.local.get(ids.map(postRecordKey)) : {};
 
   for (const [i, pageID] of ids.entries()) {
     if (run.cancelled) break;
     run.progress.update(chrome.i18n.getMessage('notify_creator_progress', [(i + 1).toString(), run.total.toString()]));
 
-    const record = donePosts[`${page.service}/${page.userID}/${pageID}`];
+    const record = donePosts[postRecordKey(pageID)];
     if (record && record.status === 'complete') {
       run.skippedPosts++;
       debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} 건너뜀 (이미 모두 받음)`);
@@ -1054,11 +1055,14 @@ function showBatchResultToast(result) {
 }
 
 // === 다운로드 기록 표시 ===
-// 게시글별 다운로드 결과(event_page.js의 downloadedPosts)를 페이지에 표시
+// 게시글별 다운로드 결과(event_page.js의 "p:<service/user/post>" 항목)를 페이지에 표시
 //   작가 페이지: 각 카드 오른쪽 아래에 ✓ / ⚠ / ✕
 //   게시글 페이지: 제목 옆에 상태와 날짜
+// 기록 전체가 아니라 지금 화면에 보이는 게시글의 기록만 읽음
 const STATUS_ICONS = { complete: '✓', partial: '⚠', failed: '✕' };
-let downloadedPosts = {};
+const POST_RECORD_PREFIX = 'p:';
+const downloadedPosts = {}; // 읽어 온 기록 { "service/user/post": { status, time } }
+const requestedPostKeys = new Set(); // 이미 읽었거나 읽는 중인 게시글
 let renderStatusTimer = null;
 
 function postStatusText(record) {
@@ -1101,17 +1105,35 @@ function applyStatusBadge(container, record, inline) {
 
 function renderDownloadStatus() {
   ensureStatusStyle();
+  const missing = [];
+  const show = (container, key, inline) => {
+    if (!requestedPostKeys.has(key)) missing.push(key);
+    applyStatusBadge(container, downloadedPosts[key], inline);
+  };
 
   for (const card of document.querySelectorAll('article.post-card')) {
     const key = getCardPostKey(card);
-    if (key) applyStatusBadge(card, downloadedPosts[key], false);
+    if (key) show(card, key, false);
   }
 
   const page = parsePagePath();
   const title = document.querySelector('h1.post__title');
   if (page && page.pageID && title) {
-    applyStatusBadge(title, downloadedPosts[`${page.service}/${page.userID}/${page.pageID}`], true);
+    show(title, `${page.service}/${page.userID}/${page.pageID}`, true);
   }
+
+  if (missing.length > 0) loadPostRecords(missing);
+}
+
+// 아직 읽지 않은 게시글의 기록을 읽어 와서 다시 표시
+async function loadPostRecords(keys) {
+  for (const key of keys) requestedPostKeys.add(key);
+  const data = await browser.storage.local.get(keys.map((key) => POST_RECORD_PREFIX + key));
+  for (const key of keys) {
+    const record = data[POST_RECORD_PREFIX + key];
+    if (record) downloadedPosts[key] = record;
+  }
+  renderDownloadStatus();
 }
 
 function scheduleRenderDownloadStatus() {
@@ -1166,16 +1188,21 @@ function ensureStatusStyle() {
   (document.head || document.documentElement).appendChild(style);
 }
 
-chrome.storage.local.get(['downloadedPosts'], (data) => {
-  downloadedPosts = data.downloadedPosts || {};
-  renderDownloadStatus();
-});
+renderDownloadStatus();
 
-// 다운로드가 끝나 기록이 바뀌면 바로 반영
+// 다운로드가 끝나 기록이 바뀌면 바로 반영 (기록 지우기 / 가져오기 포함)
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== 'local' || !changes.downloadedPosts) return;
-  downloadedPosts = changes.downloadedPosts.newValue || {};
-  renderDownloadStatus();
+  if (areaName !== 'local') return;
+  let changed = false;
+  for (const [storageKey, change] of Object.entries(changes)) {
+    if (!storageKey.startsWith(POST_RECORD_PREFIX)) continue;
+    const key = storageKey.substring(POST_RECORD_PREFIX.length);
+    if (change.newValue) downloadedPosts[key] = change.newValue;
+    else delete downloadedPosts[key];
+    requestedPostKeys.add(key);
+    changed = true;
+  }
+  if (changed) renderDownloadStatus();
 });
 
 // 페이지 이동(목록 넘기기 등)으로 카드가 새로 그려지면 다시 표시
