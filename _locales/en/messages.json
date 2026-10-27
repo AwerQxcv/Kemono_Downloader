@@ -215,6 +215,12 @@
   "update_notes_v133_status_desc": {
     "message": "When downloads pause for a moment, the progress notification now says why: the queue is full and the next post is waiting, or the server looks overloaded and downloads are resting (with the time until they resume)."
   },
+  "update_notes_v133_close_title": {
+    "message": "Download result notifications stay until you close them"
+  },
+  "update_notes_v133_close_desc": {
+    "message": "The result notification shown when a download finishes or is cancelled no longer disappears on its own. Close it with the × button in the top right. Other notifications also have a × button so you can close them right away."
+  },
   "update_notes_v132_exclude_title": {
     "message": "Exclude posts by keyword in creator downloads"
   },
@@ -410,6 +416,9 @@
   "button_cancel": {
     "message": "Cancel"
   },
+  "button_close": {
+    "message": "Close"
+  },
   "prompt_creator_exclude": {
     "message": "Download $1 posts from this creator.\nPosts whose title contains any of the keywords below are skipped. Separate keywords with commas (,), or leave empty to download everything. (e.g. WIP, draft)"
   },
@@ -459,10 +468,10 @@
     "message": "This notice is shown only once per creator download."
   },
   "notify_status_paused": {
-    "message": "⏸ Server seems overloaded, pausing ($1s left)"
+    "message": "⏸ Server seems overloaded, pausing\n($1s left)"
   },
   "notify_status_queue_full": {
-    "message": "⏸ Queue is full, waiting before the next post (queue $1 · retrying $2)"
+    "message": "⏸ Queue is full, waiting before the next post\n(queue $1 · retrying $2)"
   },
   "notify_status_waiting_turn": {
     "message": "⏸ Waiting for earlier downloads to finish"
