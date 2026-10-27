@@ -239,6 +239,12 @@
   "update_notes_v132_text_desc": {
     "message": "画像や添付ファイルがある投稿では、本文テキストファイルが保存されただけで成功や一部失敗と表示されなくなりました。テキストだけの投稿はテキストファイルの結果で判断します。"
   },
+  "update_notes_v132_hint_title": {
+    "message": "失敗通知にサーバー問題の案内を追加"
+  },
+  "update_notes_v132_hint_desc": {
+    "message": "ダウンロードに失敗したとき、拡張機能ではなく kemono / pawchive のサーバー側の問題かもしれないという案内と対処方法を表示します。"
+  },
   "update_notes_v131_skip_title": {
     "message": "ダウンロード済みのファイルをスキップ"
   },
@@ -415,6 +421,9 @@
   },
   "notify_creator_skipped_posts": {
     "message": "ダウンロード済みの投稿 $1 件をスキップ"
+  },
+  "notify_server_issue_hint": {
+    "message": "まとめてダウンロードしたときだけ失敗して個別なら成功する場合や、サーバーがまったく応答しない場合は、拡張機能ではなく kemono / pawchive のサーバー側の問題かもしれません。その投稿を個別にダウンロードするか、しばらくしてから再試行してください。"
   },
   "notify_creator_complete_title": {
     "message": "クリエイターのダウンロード完了"
