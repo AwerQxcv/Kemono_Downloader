@@ -1,8 +1,10 @@
 // === 설정 ===
 const DEFAULT_MAX_RETRY = 5;
-// 실패한 파일은 자리를 비우고(다음 파일이 먼저 시작됨) 이만큼 기다린 뒤 대기열 맨 뒤로 다시 넣음.
-// 서버가 잠깐 응답하지 않는 경우를 위해 재시도할수록 길게 기다림 (마지막 값이 최대)
-const RETRY_DELAYS = [5000, 15000, 30000, 60000];
+// 실패한 파일은 자리를 비우고(다음 파일이 먼저 시작됨) 이만큼 기다린 뒤 대기열 맨 뒤로 다시 넣음 (마지막 값이 최대)
+const RETRY_DELAYS = [3000, 5000, 10000, 15000];
+// 파일 하나가 실제로 받기를 시도한 시간(대기열에서 기다린 시간 제외)이 이만큼 넘으면 더 재시도하지 않음.
+// 원본 파일이 사이트에서 사라진 경우는 오래 기다려도 받을 수 없으므로, 마지막 시도(최대 약 30초)까지 더해도 파일당 약 2분 안에 끝냄
+const RETRY_WINDOW = 90000;
 // 시작 후 이 시간 동안 한 바이트도 못 받으면 서버가 응답하지 않는 것으로 보고 취소 후 다시 시도
 const NO_RESPONSE_TIMEOUT = 30000; // 30초
 // 받는 도중 받은 양이 이 시간 동안 그대로면 멈춘 다운로드로 보고 취소 후 다시 시도
@@ -194,6 +196,21 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     // 작가 일괄 다운로드가 대기열이 줄 때까지 다음 게시글을 미루는 데 사용
     sendResponse({ queued: downloadQueue.length, active: activeDownloads });
 
+  } else if (request.type === "batch-status") {
+    // 작가 일괄 다운로드가 끝나기를 기다리는 동안 남은 파일과 상태를 보여주는 데 사용
+    const now = Date.now();
+    const files = [];
+    for (const batchId of request.batchIds || []) {
+      const batch = batchMap.get(batchId);
+      if (!batch) continue;
+      for (const item of batch.items) {
+        if (item.status === 'complete' || item.status === 'failed' || item.status === 'cancelled') continue;
+        const tryTime = item.tryTime + (item.status === 'in_progress' && item.attemptStartedAt ? now - item.attemptStartedAt : 0);
+        files.push({ filename: item.filename, status: item.status, retryCount: item.retryCount, tryTime: tryTime });
+      }
+    }
+    sendResponse({ files: files, maxRetry: maxRetry });
+
   } else if (request.type === "cancel-batches") {
     // 작가 일괄 다운로드 취소: 해당 배치의 남은 파일을 모두 취소
     cancelBatches(request.batchIds || []);
@@ -314,6 +331,7 @@ async function downloadAndTrack(url, filename, batchId, isText = false) {
     status: 'queued',
     error: null,
     retryCount: 0,
+    tryTime: 0, // 지금까지 받기를 시도한 시간 합계 (ms). RETRY_WINDOW 참고
     downloadId: null,
     holdsSlot: false
   };
@@ -419,6 +437,7 @@ async function startDownload(item) {
   item.status = 'in_progress';
   item.lastBytes = 0;
   item.lastProgressAt = Date.now();
+  item.attemptStartedAt = item.lastProgressAt;
   downloadToItemMap.set(downloadId, item);
   debugLog(`시작 #${downloadId}: ${item.filename}${item.retryCount > 0 ? ` (재시도 ${item.retryCount}/${maxRetry})` : ''}`);
 
@@ -487,7 +506,9 @@ function handleDownloadError(downloadId, errorReason) {
   }
 
   // 그 외 에러 → 자리를 비워 다음 파일을 먼저 받고, 잠시 뒤 대기열 맨 뒤로 다시 넣어 재시도
-  if (item.retryCount < maxRetry) {
+  if (item.attemptStartedAt) item.tryTime += Date.now() - item.attemptStartedAt;
+  const outOfTime = item.tryTime >= RETRY_WINDOW;
+  if (item.retryCount < maxRetry && !outOfTime) {
     item.retryCount++;
     item.status = 'retrying';
     item.error = errorReason;
@@ -505,7 +526,8 @@ function handleDownloadError(downloadId, errorReason) {
     setTimeout(() => requeueItem(item), delay);
     pumpQueue();
   } else {
-    // 재시도 횟수 초과 → 실패 확정
+    // 재시도 횟수 또는 시간 초과 → 실패 확정
+    if (outOfTime) debugLog(`재시도 중단 #${downloadId}: ${item.filename} (${Math.round(item.tryTime / 1000)}초 동안 받지 못함)`);
     finishItem(item, 'failed', errorReason);
   }
 }

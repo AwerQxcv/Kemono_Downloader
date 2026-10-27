@@ -734,10 +734,26 @@ async function downloadCreator(str, page) {
     // 남은 다운로드를 기다리는 동안에도 취소할 수 있음
     run.progress.update(chrome.i18n.getMessage('notify_creator_waiting'));
   }
-  // 오래 기다리면 어떤 배치가 남았는지 30초마다 콘솔에 표시
-  run.waitLogTimer = setInterval(() => {
-    debugLog(`다운로드 완료 대기 중. 남은 배치 ${run.pendingBatchIds.size}개:`, Array.from(run.pendingBatchIds));
-  }, 30000);
+  // 기다리는 동안 남은 파일 수를 알림에 표시하고, 15초마다 콘솔에 파일별 상태를 표시
+  let waitTicks = 0;
+  const showWaitStatus = async () => {
+    let status;
+    try {
+      status = await browser.runtime.sendMessage({ type: 'batch-status', batchIds: Array.from(run.pendingBatchIds) });
+    } catch (error) {
+      return;
+    }
+    if (!status || creatorRun !== run || run.cancelled) return;
+    const retrying = status.files.filter((file) => file.retryCount > 0).length;
+    run.progress.update(chrome.i18n.getMessage('notify_creator_waiting') + '\n' +
+      chrome.i18n.getMessage('notify_creator_waiting_files', [status.files.length.toString(), retrying.toString()]));
+    if (waitTicks++ % 3 === 0) {
+      debugLog(`다운로드 완료 대기 중. 남은 배치 ${run.pendingBatchIds.size}개, 남은 파일 ${status.files.length}개 (재시도 중 ${retrying}개)` +
+        status.files.map((file) => `\n  ${file.filename}: ${file.status}${file.retryCount > 0 ? ` (재시도 ${file.retryCount}/${status.maxRetry})` : ''}, 시도한 시간 ${Math.round(file.tryTime / 1000)}초`).join(''));
+    }
+  };
+  if (!run.cancelled) showWaitStatus();
+  run.waitLogTimer = setInterval(showWaitStatus, 5000);
   finishCreatorRunIfDone();
 }
 
@@ -915,6 +931,7 @@ function createToastStyle() {
     }
     .kd-toast.kd-progress .kd-toast-title {
       margin-bottom: 0;
+      white-space: pre-line;
     }
     .kd-toast-title {
       font-weight: 700;
