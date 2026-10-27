@@ -6,6 +6,7 @@ const PATH_CONFIG = {
   txtAttachmentsPath: '$AttName$',
   numRetryCount: 5,
   numDownloadDelay: 150,
+  numMaxConcurrent: 0,
   selConflictAction: 'uniquify',
   txtNotificationFormat: '$PlatformName$ $UserName$ - $Title$'
 }
@@ -130,6 +131,8 @@ function save_settings() {
   if (isNaN(numRetryCount) || numRetryCount < 0) numRetryCount = PATH_CONFIG.numRetryCount;
   var numDownloadDelay = parseInt(document.getElementById("numDownloadDelay").value);
   if (isNaN(numDownloadDelay) || numDownloadDelay < 0) numDownloadDelay = PATH_CONFIG.numDownloadDelay;
+  var numMaxConcurrent = parseInt(document.getElementById("numMaxConcurrent").value);
+  if (isNaN(numMaxConcurrent) || numMaxConcurrent < 0) numMaxConcurrent = PATH_CONFIG.numMaxConcurrent;
   var selConflictAction = document.getElementById("selConflictAction").value;
   var txtNotificationFormat = document.getElementById("txtNotificationFormat").value;
 
@@ -145,6 +148,7 @@ function save_settings() {
       txtAttachmentsPath: txtAttachmentsPath,
       numRetryCount: numRetryCount,
       numDownloadDelay: numDownloadDelay,
+      numMaxConcurrent: numMaxConcurrent,
       selConflictAction: selConflictAction,
       txtNotificationFormat: txtNotificationFormat,
     },
@@ -156,7 +160,7 @@ function save_settings() {
 
 function load_settings() {
   chrome.storage.local.get(
-    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "numDownloadDelay", "selConflictAction", "txtNotificationFormat"],
+    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "txtNotificationFormat"],
     function (load) {
       document.getElementById("cbDlText").checked = load.cbDlText;
       document.getElementById("cbDlImages").checked = load.cbDlImages;
@@ -168,6 +172,7 @@ function load_settings() {
       document.getElementById("txtAttachmentsPath").value = load.txtAttachmentsPath;
       document.getElementById("numRetryCount").value = load.numRetryCount ?? PATH_CONFIG.numRetryCount;
       document.getElementById("numDownloadDelay").value = load.numDownloadDelay ?? PATH_CONFIG.numDownloadDelay;
+      document.getElementById("numMaxConcurrent").value = load.numMaxConcurrent ?? PATH_CONFIG.numMaxConcurrent;
       document.getElementById("selConflictAction").value = load.selConflictAction ?? PATH_CONFIG.selConflictAction;
       document.getElementById("txtNotificationFormat").value = load.txtNotificationFormat ?? PATH_CONFIG.txtNotificationFormat;
       if (load.txtBasePath == undefined) {
@@ -198,6 +203,7 @@ function initialize_settings() {
   document.getElementById("txtAttachmentsPath").value = PATH_CONFIG.txtAttachmentsPath;
   document.getElementById("numRetryCount").value = PATH_CONFIG.numRetryCount;
   document.getElementById("numDownloadDelay").value = PATH_CONFIG.numDownloadDelay;
+  document.getElementById("numMaxConcurrent").value = PATH_CONFIG.numMaxConcurrent;
   document.getElementById("selConflictAction").value = PATH_CONFIG.selConflictAction;
   document.getElementById("txtNotificationFormat").value = PATH_CONFIG.txtNotificationFormat;
   save_settings();

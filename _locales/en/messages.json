@@ -242,6 +242,9 @@
   "help_retry_count": {
     "message": "Specifies the maximum number of times a failed download will be retried.<br/>Set to <b>0</b> to disable automatic retries."
   },
+  "options_max_concurrent": {
+    "message": "Maximum simultaneous downloads (0 = unlimited)"
+  },
   "options_download_delay": {
     "message": "Delay between downloads (ms)"
   },
