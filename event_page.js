@@ -628,7 +628,7 @@ function showOSNotification(total, success, failed, notificationText) {
     type: "basic",
     iconUrl: "icon_48.png",
     title: title,
-    message: [notificationText, stats].filter(Boolean).join("\n")
+    message: [notificationText, stats, failed > 0 ? chrome.i18n.getMessage("notify_server_issue_hint") : ''].filter(Boolean).join("\n")
   });
 }
 

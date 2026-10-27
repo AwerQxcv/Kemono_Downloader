@@ -239,6 +239,12 @@
   "update_notes_v132_text_desc": {
     "message": "For posts with images or attachments, a saved post text file alone no longer makes the post count as downloaded or partly failed. Text-only posts are judged by the text file."
   },
+  "update_notes_v132_hint_title": {
+    "message": "Server issue note on failure notices"
+  },
+  "update_notes_v132_hint_desc": {
+    "message": "When downloads fail, the notice now explains that the problem may be on the kemono / pawchive server rather than in the extension, and what to try."
+  },
   "update_notes_v131_skip_title": {
     "message": "Skip files that were already downloaded"
   },
@@ -415,6 +421,9 @@
   },
   "notify_creator_skipped_posts": {
     "message": "$1 already downloaded posts skipped"
+  },
+  "notify_server_issue_hint": {
+    "message": "If downloads fail only in bulk but work one at a time, or the server does not respond at all, the problem may be on the kemono / pawchive server rather than in this extension. Try that post on its own or try again later."
   },
   "notify_creator_complete_title": {
     "message": "Creator Download Complete"

@@ -239,6 +239,12 @@
   "update_notes_v132_text_desc": {
     "message": "이미지·첨부파일이 있는 게시글은 본문 텍스트 파일이 받아졌다는 이유만으로 성공이나 일부 실패로 표시되지 않습니다. 텍스트만 있는 게시글은 텍스트 파일 결과로 판단합니다."
   },
+  "update_notes_v132_hint_title": {
+    "message": "실패 알림에 서버 문제 안내 추가"
+  },
+  "update_notes_v132_hint_desc": {
+    "message": "다운로드가 실패하면 확장 프로그램이 아니라 kemono / pawchive 서버 문제일 수 있다는 안내와 대처 방법을 함께 보여줍니다."
+  },
   "update_notes_v131_skip_title": {
     "message": "이미 받은 파일 건너뛰기"
   },
@@ -415,6 +421,9 @@
   },
   "notify_creator_skipped_posts": {
     "message": "이미 받은 게시글 $1개 건너뜀"
+  },
+  "notify_server_issue_hint": {
+    "message": "여러 개를 받을 때만 실패하고 하나씩 받으면 되거나 서버가 아예 응답하지 않는다면, 확장 프로그램이 아니라 kemono / pawchive 서버 문제일 수 있습니다. 해당 게시글을 따로 받아 보거나 잠시 뒤 다시 시도해 주세요."
   },
   "notify_creator_complete_title": {
     "message": "작가 다운로드 완료"

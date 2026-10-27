@@ -542,7 +542,8 @@ function showPostFetchError(error, body = '') {
     '❌ ' + chrome.i18n.getMessage(notFound ? 'notify_post_not_found_title' : 'notify_post_fetch_failed_title'),
     body || (notFound ? '' : String(error.message || error)),
     '',
-    'error'
+    'error',
+    notFound ? '' : chrome.i18n.getMessage('notify_server_issue_hint')
   );
 }
 
@@ -776,7 +777,8 @@ function finishCreatorRunIfDone() {
     (run.cancelled ? '⏹️ ' : failed ? '⚠️ ' : '✅ ') + chrome.i18n.getMessage(run.cancelled ? 'notify_creator_cancelled_title' : 'notify_creator_complete_title'),
     lines.join('\n'),
     '',
-    failed || run.cancelled ? 'warning' : 'success'
+    failed || run.cancelled ? 'warning' : 'success',
+    failed ? chrome.i18n.getMessage('notify_server_issue_hint') : ''
   );
 }
 
@@ -910,6 +912,14 @@ function createToastStyle() {
       font-size: 11px;
       margin-top: 6px;
     }
+    .kd-toast-hint {
+      opacity: 0.85;
+      font-size: 11px;
+      line-height: 1.45;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+    }
     .kd-toast.kd-fade-out {
       animation: kd-fade-out 0.5s ease forwards !important;
     }
@@ -937,13 +947,14 @@ function createToastStyle() {
   return style;
 }
 
-function showToast(title, body, stats, type) {
+// hint: 맨 아래에 작게 붙는 안내 문구. 있으면 읽을 시간을 주기 위해 더 오래 표시
+function showToast(title, body, stats, type, hint = '') {
   const container = createToastContainer();
 
   const toast = document.createElement('div');
   toast.className = `kd-toast kd-${type}`;
   // 게시글 제목 등이 HTML로 해석되지 않도록 textContent로 삽입 (빈 줄은 생략)
-  for (const [className, text] of [['kd-toast-title', title], ['kd-toast-body', body], ['kd-toast-stats', stats]]) {
+  for (const [className, text] of [['kd-toast-title', title], ['kd-toast-body', body], ['kd-toast-stats', stats], ['kd-toast-hint', hint]]) {
     if (!text) continue;
     const line = document.createElement('div');
     line.className = className;
@@ -960,7 +971,7 @@ function showToast(title, body, stats, type) {
     toast.addEventListener('animationend', (e) => {
       if (e.animationName === 'kd-fade-out') toast.remove();
     });
-  }, 5000);
+  }, hint ? 12000 : 5000);
 
   // 다른 탭을 보고 있는 동안 완료되면 보지도 못하고 사라지므로, 탭으로 돌아온 뒤부터 5초를 셈
   if (document.hidden) {
@@ -1016,16 +1027,18 @@ function handleBatchResult(result) {
     creatorRun.filesFailed += result.failed;
     creatorRun.filesCancelled += cancelled;
     debugLog(`배치 결과 ${result.batchId}: 성공 ${result.success}, 실패 ${result.failed}, 취소 ${cancelled} (남은 배치 ${creatorRun.pendingBatchIds.size}개)`);
-    if (result.failed > 0) showBatchResultToast(result);
+    if (result.failed > 0) showBatchResultToast(result, false); // 서버 문제 안내는 마지막 요약에 한 번만
     finishCreatorRunIfDone();
     return;
   }
   showBatchResultToast(result);
 }
 
-function showBatchResultToast(result) {
+// withHint: 실패했을 때 "사이트 서버 문제일 수 있음" 안내를 붙일지
+function showBatchResultToast(result, withHint = true) {
   // 다운로드 시작 시점에 만들어 둔 알림 문구 사용 (main 참고)
   const notificationText = result.notificationText || '';
+  const hint = withHint ? chrome.i18n.getMessage('notify_server_issue_hint') : '';
 
   if (result.total === 0) {
     // 다운로드할 파일 없음
@@ -1049,7 +1062,8 @@ function showBatchResultToast(result) {
       '⚠️ ' + chrome.i18n.getMessage('notify_batch_partial_fail_title'),
       notificationText,
       chrome.i18n.getMessage('notify_batch_stats_partial', [result.success.toString(), result.total.toString(), result.failed.toString()]),
-      'warning'
+      'warning',
+      hint
     );
   } else {
     // 전부 실패
@@ -1057,7 +1071,8 @@ function showBatchResultToast(result) {
       '❌ ' + chrome.i18n.getMessage('notify_batch_failed_title'),
       notificationText,
       chrome.i18n.getMessage('notify_batch_stats_partial', [result.success.toString(), result.total.toString(), result.failed.toString()]),
-      'error'
+      'error',
+      hint
     );
   }
 }
