@@ -56,5 +56,12 @@
   "options_ui": {
     "page": "settings.html"
   },
-  "homepage_url": "https://awerqxcv.github.io/Kemono_Downloader/"
+  "homepage_url": "https://awerqxcv.github.io/Kemono_Downloader/",
+  "browser_specific_settings": {
+    "gecko": {
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
 }

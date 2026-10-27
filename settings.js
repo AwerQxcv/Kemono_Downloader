@@ -470,10 +470,7 @@ function initTooltips() {
     if (config.info) {
       const tooltipSpan = document.createElement('span');
       tooltipSpan.className = 'custom-tooltip-wrapper';
-      tooltipSpan.innerHTML = `
-        <span class="help-icon">ⓘ</span>
-        <div class="tooltip-popup">${i18n.getMessage(config.info)}</div>
-      `;
+      tooltipSpan.append(createTooltipContent('ⓘ', i18n.getMessage(config.info)));
       container.appendChild(tooltipSpan);
     }
 
@@ -483,13 +480,50 @@ function initTooltips() {
       warnSpan.className = 'custom-tooltip-wrapper warning-style';
       warnSpan.id = `warning-icon-${id}`; //Create an id for the icon with a name like "warning-lblText" to manage it.
       warnSpan.style.display = 'none'; // Hide by default, we don't have errors
-      warnSpan.innerHTML = `
-        <span class="help-icon">⚠</span>
-        <div class="tooltip-popup">${i18n.getMessage(config.warning)}</div>
-      `;
+      warnSpan.append(createTooltipContent('⚠', i18n.getMessage(config.warning)));
       container.appendChild(warnSpan);
     }
   }
+}
+
+// 툴팁 아이콘 + 내용. innerHTML 대신 DOM으로 만들어 Firefox 애드온 검사의 "Unsafe assignment to innerHTML" 경고를 피함
+function createTooltipContent(icon, message) {
+  const fragment = document.createDocumentFragment();
+
+  const iconSpan = document.createElement('span');
+  iconSpan.className = 'help-icon';
+  iconSpan.textContent = icon;
+  fragment.appendChild(iconSpan);
+
+  const popup = document.createElement('div');
+  popup.className = 'tooltip-popup';
+  appendFormattedText(popup, message);
+  fragment.appendChild(popup);
+
+  return fragment;
+}
+
+// 번역 문구에 쓰는 서식 태그(<b>, <i>, <u>, <br>, <ul>, <li>)만 살리고 나머지는 텍스트로 넣음
+const ALLOWED_MESSAGE_TAGS = new Set(['B', 'I', 'U', 'BR', 'UL', 'LI']);
+
+function appendFormattedText(target, message) {
+  const doc = new DOMParser().parseFromString(message || '', 'text/html');
+  const copyNodes = (from, to) => {
+    for (const node of from.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        to.appendChild(document.createTextNode(node.textContent));
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        if (ALLOWED_MESSAGE_TAGS.has(node.tagName)) {
+          const el = document.createElement(node.tagName.toLowerCase());
+          copyNodes(node, el);
+          to.appendChild(el);
+        } else {
+          copyNodes(node, to); // 허용하지 않는 태그는 벗기고 안의 내용만 유지
+        }
+      }
+    }
+  };
+  copyNodes(doc.body, target);
 }
 
 function toggleWarning(inputId, show) {
