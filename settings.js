@@ -4,6 +4,7 @@ const PATH_CONFIG = {
   txtTextPath: '__main__text__',
   txtImagesPath: '$ImageCounter#3$',
   txtAttachmentsPath: '$AttName$',
+  txtThumbnailText: '_Thumbnail',
   numRetryCount: 5,
   numDownloadDelay: 150,
   numMaxConcurrent: 3,
@@ -33,6 +34,7 @@ const MACRO_CONFIG = {
     'txtTextPath': '',
     'txtImagesPath': 'ImageCounter|ImageCounter#\\d+|ImageName|Thumbnail',
     'txtAttachmentsPath': 'AttCounter|AttCounter#\\d+|AttName|Thumbnail',
+    'txtThumbnailText': '',
     'txtNotificationFormat': ''
   }
 };
@@ -111,6 +113,11 @@ const tooltipRegistry = {
     info: "help_skip_downloaded",
     containerClass: "field-header-txt"
   },
+  "lblThumbnailText": {
+    info: "help_thumbnail_text",
+    warning: "warning_save_problems",
+    containerClass: "field-header-txt"
+  },
   "lblNotificationFormat": {
     info: "help_notification_format",
     warning: "warning_save_problems",
@@ -145,6 +152,7 @@ function save_settings() {
   var txtTextPath = document.getElementById("txtTextPath").value;
   var txtImagesPath = document.getElementById("txtImagesPath").value;
   var txtAttachmentsPath = document.getElementById("txtAttachmentsPath").value;
+  var txtThumbnailText = document.getElementById("txtThumbnailText").value;
   var numRetryCount = parseInt(document.getElementById("numRetryCount").value);
   if (isNaN(numRetryCount) || numRetryCount < 0) numRetryCount = PATH_CONFIG.numRetryCount;
   var numDownloadDelay = parseInt(document.getElementById("numDownloadDelay").value);
@@ -165,6 +173,7 @@ function save_settings() {
       txtTextPath: txtTextPath,
       txtImagesPath: txtImagesPath,
       txtAttachmentsPath: txtAttachmentsPath,
+      txtThumbnailText: txtThumbnailText,
       numRetryCount: numRetryCount,
       numDownloadDelay: numDownloadDelay,
       numMaxConcurrent: numMaxConcurrent,
@@ -180,7 +189,7 @@ function save_settings() {
 
 function load_settings() {
   chrome.storage.local.get(
-    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "selSkipDownloaded", "txtNotificationFormat"],
+    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "txtThumbnailText", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "selSkipDownloaded", "txtNotificationFormat"],
     function (load) {
       document.getElementById("cbDlText").checked = load.cbDlText;
       document.getElementById("cbDlImages").checked = load.cbDlImages;
@@ -191,6 +200,7 @@ function load_settings() {
       document.getElementById("txtTextPath").value = load.txtTextPath;
       document.getElementById("txtImagesPath").value = load.txtImagesPath;
       document.getElementById("txtAttachmentsPath").value = load.txtAttachmentsPath;
+      document.getElementById("txtThumbnailText").value = load.txtThumbnailText ?? PATH_CONFIG.txtThumbnailText;
       document.getElementById("numRetryCount").value = load.numRetryCount ?? PATH_CONFIG.numRetryCount;
       document.getElementById("numDownloadDelay").value = load.numDownloadDelay ?? PATH_CONFIG.numDownloadDelay;
       document.getElementById("numMaxConcurrent").value = clampMaxConcurrent(load.numMaxConcurrent ?? PATH_CONFIG.numMaxConcurrent);
@@ -224,6 +234,7 @@ function initialize_settings() {
   document.getElementById("txtTextPath").value = PATH_CONFIG.txtTextPath;
   document.getElementById("txtImagesPath").value = PATH_CONFIG.txtImagesPath;
   document.getElementById("txtAttachmentsPath").value = PATH_CONFIG.txtAttachmentsPath;
+  document.getElementById("txtThumbnailText").value = PATH_CONFIG.txtThumbnailText;
   document.getElementById("numRetryCount").value = PATH_CONFIG.numRetryCount;
   document.getElementById("numDownloadDelay").value = PATH_CONFIG.numDownloadDelay;
   document.getElementById("numMaxConcurrent").value = PATH_CONFIG.numMaxConcurrent;

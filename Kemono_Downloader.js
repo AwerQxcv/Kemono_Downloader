@@ -496,7 +496,10 @@ function getSavePathAndName(type, item) {
   };
 
   const { path, prefix } = config[type];
-  let query = convertMacrosInPath(txtBasePath + "/" + path);
+  // $Thumbnail$: 미리보기로 받는 파일이면 설정한 문구(기본 "_Thumbnail"), 아니면 빈 문자열
+  // (예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail). 문구 안의 일반 매크로도 바뀌도록 먼저 넣음
+  const thumbnailText = item.thumbnail ? txtThumbnailText.replace(/[\/\\]/g, '_') : '';
+  let query = convertMacrosInPath(txtBasePath + "/" + path.replaceAll('$Thumbnail$', thumbnailText));
 
   // Search $PrefixCounter$ or $PrefixCounter#X$
   const counterRegex = new RegExp(`\\$${prefix}Counter(?:#(\\d+))?\\$`, 'g');
@@ -506,8 +509,6 @@ function getSavePathAndName(type, item) {
     return padValue ? indexStr.padStart(Number(padValue), "0") : indexStr;
   });
 
-  // $Thumbnail$: 미리보기로 받는 파일이면 "_Thumbnail", 아니면 빈 문자열 (예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)
-  query = query.replaceAll('$Thumbnail$', item.thumbnail ? '_Thumbnail' : '');
   return query.replaceAll(`$${prefix}Name$`, item.name) + item.extension;
 }
 
@@ -559,6 +560,7 @@ async function main(str) {
   globalThis.txtAttachmentsPath = str.txtAttachmentsPath;
   globalThis.cbRemoveDupByUrl = str.cbRemoveDupByUrl;
   globalThis.cbSkipKemonoOrigin = str.cbSkipKemonoOrigin !== false; // 설정 전(undefined)에는 켜진 것으로 봄
+  globalThis.txtThumbnailText = str.txtThumbnailText ?? '_Thumbnail'; // $Thumbnail$ 매크로에 들어갈 문구
   const delay = parseInt(str.numDownloadDelay);
   globalThis.numDownloadDelay = isNaN(delay) || delay < 0 ? 150 : delay; // 파일 간 다운로드 지연 시간 (ms)
 
@@ -980,7 +982,7 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
   // 기존 다운로드 트리거 (getImage 메시지)
   if (request.message === "getImage") {
     chrome.storage.local.get(
-      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numDownloadDelay", "txtNotificationFormat"],
+      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "txtThumbnailText", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numDownloadDelay", "txtNotificationFormat"],
       function (str) {
         if (str.txtBasePath == undefined) {
           const version = browser.runtime.getManifest().version;
@@ -1005,9 +1007,14 @@ function createToastContainer() {
   }
   // 사이트가 페이지 이동 중 body/head를 다시 그리면서 컨테이너나 스타일을 지울 수 있음.
   // 스타일이 <head>에서만 지워지면 알림이 스타일 없이 화면 오른쪽에 붙어 나오므로,
-  // 스타일을 컨테이너 안에 함께 넣고 호출할 때마다 둘 다 있는지 확인함
-  if (!container.querySelector('#kd-toast-style')) {
-    container.prepend(createToastStyle());
+  // 스타일을 컨테이너 안에 함께 넣고 호출할 때마다 둘 다 있는지 확인함.
+  // 확장을 업데이트해도 새로고침 전까지는 예전 버전이 만든 스타일이 남아 있으므로 내용이 다르면 바꿈
+  const style = createToastStyle();
+  const oldStyle = container.querySelector('#kd-toast-style');
+  if (!oldStyle) {
+    container.prepend(style);
+  } else if (oldStyle.textContent !== style.textContent) {
+    oldStyle.replaceWith(style);
   }
   if (!container.isConnected) {
     document.body.appendChild(container);
@@ -1051,25 +1058,30 @@ function createToastStyle() {
       padding-right: 36px;
     }
     .kd-toast-close {
+      all: unset;
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 22px;
-      height: 22px;
-      padding: 0;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
+      top: 10px;
+      right: 12px;
+      width: 16px;
+      height: 16px;
       color: #fff;
-      font-size: 16px;
-      line-height: 22px;
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 16px;
       text-align: center;
-      opacity: 0.7;
+      opacity: 0.75;
       cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease;
     }
     .kd-toast-close:hover {
       opacity: 1;
-      background: rgba(255, 255, 255, 0.18);
+      transform: scale(1.15);
+    }
+    .kd-toast-close:focus-visible {
+      opacity: 1;
+      outline: 1px solid rgba(255, 255, 255, 0.7);
+      outline-offset: 2px;
+      border-radius: 3px;
     }
     .kd-toast.kd-success {
       background: linear-gradient(135deg, rgba(40, 167, 69, 0.93), rgba(28, 120, 50, 0.93));

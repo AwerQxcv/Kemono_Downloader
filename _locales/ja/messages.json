@@ -43,6 +43,9 @@
   "options_images_path": {
     "message": "画像の保存先"
   },
+  "options_thumbnail_text": {
+    "message": "サムネイルのときの文言 ($Thumbnail$)"
+  },
   "options_attachments_path": {
     "message": "添付ファイルの保存先"
   },
@@ -113,7 +116,7 @@
     "message": "元の添付ファイル名"
   },
   "macro_desc_thumbnail": {
-    "message": "元ファイルの代わりにプレビュー (サムネイル) でダウンロードするファイルなら _Thumbnail、それ以外は空欄。例: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail"
+    "message": "元ファイルの代わりにプレビュー (サムネイル) でダウンロードするファイルなら「サムネイルのときの文言」(既定 _Thumbnail)、それ以外は空欄。例: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail"
   },
   "macro_desc_year": {
     "message": "年"
@@ -172,6 +175,9 @@
   "help_images_path": {
     "message": "画像がダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「画像の保存先」順で保存先が指定されます。<br/>このマクロには<u>一般マクロ</u>、<u>時刻マクロ</u>と<u>画像マクロ</u>を使用してください。"
   },
+  "help_thumbnail_text": {
+    "message": "元ファイルの代わりにプレビュー (サムネイル) でダウンロードするファイルでは、<u>$Thumbnail$</u> マクロがこの文言に置き換わります。それ以外のファイルでは空欄になります。<br/>画像・添付ファイルの保存先の好きな位置に $Thumbnail$ を入れてください。<ul><li>$ImageCounter#3$$Thumbnail$ + <b>_Thumbnail</b> → 001_Thumbnail</li><li>$Thumbnail$$ImageCounter#3$ + <b>Thumbnail_</b> → Thumbnail_001</li></ul>"
+  },
   "help_attachments_path": {
     "message": "添付ファイルがダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「添付ファイル保存先」順で保存先が指定されます。<br/>このマクロには<u>一般マクロ</u>、<u>時刻マクロ</u>と<u>添付ファイルマクロ</u>を使用してください。"
   },
@@ -210,7 +216,7 @@
     "message": "元ファイルをダウンロードできないファイルはプレビュー画像でダウンロード"
   },
   "update_notes_v133_preview_desc": {
-    "message": "サイトに元ファイルがなくプレビューだけが残っているファイル (preview_only) は、ダウンロードできない元ファイルのアドレスの代わりにプレビュー (サムネイル) 画像でダウンロードします。kemono から取り込まれたファイル (origin が kemono) は kemono のファイルサーバーが停止中のためほぼ必ず失敗するので、画像はプレビューでダウンロードし、それ以外のファイルはスキップします。 設定の「kemono から取り込まれたファイルを元ファイルでダウンロードしない」をオフにすると元ファイルでダウンロードします (既定はオン)。該当するファイルがあると通知し、作者の一括ダウンロードでは 1 回だけ通知してそのまま続行します。 画像・添付ファイル名の設定に $Thumbnail$ マクロを入れると、このようなファイル名に _Thumbnail が付きます (例: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)。"
+    "message": "サイトに元ファイルがなくプレビューだけが残っているファイル (preview_only) は、ダウンロードできない元ファイルのアドレスの代わりにプレビュー (サムネイル) 画像でダウンロードします。kemono から取り込まれたファイル (origin が kemono) は kemono のファイルサーバーが停止中のためほぼ必ず失敗するので、画像はプレビューでダウンロードし、それ以外のファイルはスキップします。 設定の「kemono から取り込まれたファイルを元ファイルでダウンロードしない」をオフにすると元ファイルでダウンロードします (既定はオン)。該当するファイルがあると通知し、作者の一括ダウンロードでは 1 回だけ通知してそのまま続行します。 画像・添付ファイル名の設定に $Thumbnail$ マクロを入れると、このようなファイル名に好きな文言 (既定 _Thumbnail) が付きます (例: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)。文言は設定の「サムネイルのときの文言」で変更できます。"
   },
   "update_notes_v133_stuck_title": {
     "message": "再試行するファイルが長時間進まない問題を修正"
