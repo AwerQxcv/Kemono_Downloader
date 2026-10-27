@@ -249,7 +249,7 @@
     "message": "게시글 다운로드 진행 상황 표시"
   },
   "update_notes_v132_progress_desc": {
-    "message": "게시글 하나를 받을 때도 몇 개를 받았는지와 재시도 중인 파일 수를 알림으로 보여주고, 알림에서 바로 취소할 수 있습니다."
+    "message": "게시글 하나를 받을 때도 몇 개를 받았는지와 재시도 중인 파일 수를 알림으로 보여주고, 알림에서 바로 취소할 수 있습니다. 취소하는 동안에는 (작가 일괄 다운로드 포함) 정리할 파일이 몇 개 남았는지 보여줍니다."
   },
   "update_notes_v131_skip_title": {
     "message": "이미 받은 파일 건너뛰기"
@@ -436,6 +436,9 @@
   },
   "notify_creator_cancelling": {
     "message": "취소하는 중… 남은 다운로드를 정리하고 있습니다"
+  },
+  "notify_cancel_remaining": {
+    "message": "정리할 파일 $1개 남음"
   },
   "notify_creator_cancelled_files": {
     "message": "취소한 파일 $1개"

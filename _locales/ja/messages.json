@@ -249,7 +249,7 @@
     "message": "投稿ダウンロードの進行状況を表示"
   },
   "update_notes_v132_progress_desc": {
-    "message": "投稿を 1 件ダウンロードするときも、完了した数と再試行中のファイル数を通知に表示し、通知から直接キャンセルできます。"
+    "message": "投稿を 1 件ダウンロードするときも、完了した数と再試行中のファイル数を通知に表示し、通知から直接キャンセルできます。キャンセル中は (作者の一括ダウンロードも含め) 整理が残っているファイル数を表示します。"
   },
   "update_notes_v131_skip_title": {
     "message": "ダウンロード済みのファイルをスキップ"
@@ -436,6 +436,9 @@
   },
   "notify_creator_cancelling": {
     "message": "キャンセル中… 残りのダウンロードを整理しています"
+  },
+  "notify_cancel_remaining": {
+    "message": "残り $1 件を整理中"
   },
   "notify_creator_cancelled_files": {
     "message": "キャンセルしたファイル $1 件"
