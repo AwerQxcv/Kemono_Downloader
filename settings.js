@@ -67,6 +67,10 @@ const tooltipRegistry = {
     info: "help_remove_duplicates_by_url",
     containerClass: "field-header-cb"
   },
+  "lblSkipKemonoOrigin": {
+    info: "help_skip_kemono_origin",
+    containerClass: "field-header-cb"
+  },
   "lblBasePath": {
     info: "help_base_path",
     warning: "warning_save_problems",
@@ -136,6 +140,7 @@ function save_settings() {
   var cbDlImages = document.getElementById("cbDlImages").checked;
   var cbDlAttachments = document.getElementById("cbDlAttachments").checked;
   var cbRemoveDupByUrl = document.getElementById("cbRemoveDupByUrl").checked;
+  var cbSkipKemonoOrigin = document.getElementById("cbSkipKemonoOrigin").checked;
   var txtBasePath = document.getElementById("txtBasePath").value;
   var txtTextPath = document.getElementById("txtTextPath").value;
   var txtImagesPath = document.getElementById("txtImagesPath").value;
@@ -155,6 +160,7 @@ function save_settings() {
       cbDlImages: cbDlImages,
       cbDlAttachments: cbDlAttachments,
       cbRemoveDupByUrl: cbRemoveDupByUrl,
+      cbSkipKemonoOrigin: cbSkipKemonoOrigin,
       txtBasePath: txtBasePath,
       txtTextPath: txtTextPath,
       txtImagesPath: txtImagesPath,
@@ -174,12 +180,13 @@ function save_settings() {
 
 function load_settings() {
   chrome.storage.local.get(
-    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "selSkipDownloaded", "txtNotificationFormat"],
+    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "selSkipDownloaded", "txtNotificationFormat"],
     function (load) {
       document.getElementById("cbDlText").checked = load.cbDlText;
       document.getElementById("cbDlImages").checked = load.cbDlImages;
       document.getElementById("cbDlAttachments").checked = load.cbDlAttachments;
       document.getElementById("cbRemoveDupByUrl").checked = load.cbRemoveDupByUrl;
+      document.getElementById("cbSkipKemonoOrigin").checked = load.cbSkipKemonoOrigin ?? true;
       document.getElementById("txtBasePath").value = load.txtBasePath;
       document.getElementById("txtTextPath").value = load.txtTextPath;
       document.getElementById("txtImagesPath").value = load.txtImagesPath;
@@ -212,6 +219,7 @@ function initialize_settings() {
   document.getElementById("cbDlImages").checked = true;
   document.getElementById("cbDlAttachments").checked = true;
   document.getElementById("cbRemoveDupByUrl").checked = true;
+  document.getElementById("cbSkipKemonoOrigin").checked = true;
   document.getElementById("txtBasePath").value = PATH_CONFIG.txtBasePath;
   document.getElementById("txtTextPath").value = PATH_CONFIG.txtTextPath;
   document.getElementById("txtImagesPath").value = PATH_CONFIG.txtImagesPath;

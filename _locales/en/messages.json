@@ -28,6 +28,9 @@
   "options_remove_duplicates_by_url": {
     "message": "Remove duplicates by URL"
   },
+  "options_skip_kemono_origin": {
+    "message": "Don't download kemono-origin files as originals"
+  },
   "options_download_path": {
     "message": "Paths for file downloads"
   },
@@ -157,6 +160,9 @@
   "help_remove_duplicates_by_url": {
     "message": "If the list of downloaded files (images or attachments) contains several files that are downloaded from the same address, this setting will affect the download: <ul><li><b>Enabled</b> - the file will be downloaded only once;</li><li><b>Disabled</b> - a copy of the file will be downloaded and saved.</li></ul>"
   },
+  "help_skip_kemono_origin": {
+    "message": "On pawchive, files brought over from kemono (origin: kemono) almost always fail to download as originals because kemono's file server is down.<ul><li><b>Enabled</b> - images are downloaded as previews (thumbnails), other files are skipped.</li><li><b>Disabled</b> - turn this off to download originals once kemono's file server is back.</li></ul>"
+  },
   "help_base_path": {
     "message": "The first, general part of the path where downloaded files will be saved. Depending on the content type, the corresponding part from the fields below will be appended to it, thus forming the full path and file name for saving.<br/>Macros are supported. When downloading files, macros will be replaced with the current values according to their description in the table at the bottom of the page. Only <u>general macros</u> and <u>time macros</u> can be used in this field."
   },
@@ -204,7 +210,7 @@
     "message": "Files whose originals can't be downloaded are saved as previews"
   },
   "update_notes_v133_preview_desc": {
-    "message": "Files that only have a preview left on the site (preview_only), and files brought over from kemono (origin is kemono; kemono's file server is down, so they almost always fail), are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. A notification tells you when this happens; in creator downloads it appears only once and the download continues. Add the $Thumbnail$ macro to the image or attachment file name to mark these files with _Thumbnail (e.g. $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)."
+    "message": "Files that only have a preview left on the site (preview_only) are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. Files brought over from kemono (origin is kemono) almost always fail because kemono's file server is down, so their images are downloaded as previews and other files are skipped. Turn off \"Don't download kemono-origin files as originals\" in Settings to download originals (on by default). A notification tells you when this happens; in creator downloads it appears only once and the download continues. Add the $Thumbnail$ macro to the image or attachment file name to mark these files with _Thumbnail (e.g. $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)."
   },
   "update_notes_v133_stuck_title": {
     "message": "Fixed files waiting to be retried not making progress for a long time"
@@ -459,7 +465,7 @@
     "message": "$1/$2 downloaded, $3 cancelled"
   },
   "notify_preview_only_title": {
-    "message": "Some files are downloaded as previews instead of originals"
+    "message": "Some files are not downloaded as originals"
   },
   "notify_preview_only_body": {
     "message": "Files whose originals are not on the site are downloaded as preview (thumbnail) images."
@@ -468,10 +474,13 @@
     "message": "They may be lower quality than the original."
   },
   "notify_preview_kemono_body": {
-    "message": "Files brought over from kemono (origin: kemono) are not downloaded in original quality because kemono's file server is down. They are downloaded as preview (thumbnail) images."
+    "message": "Files brought over from kemono (origin: kemono) are not downloaded as originals because kemono's file server is down. Images are downloaded as previews (thumbnails), and other files are skipped."
   },
   "notify_preview_only_count": {
     "message": "$1 files downloaded as previews"
+  },
+  "notify_kemono_skipped_count": {
+    "message": "$1 kemono files skipped"
   },
   "notify_preview_only_once": {
     "message": "Each reason is shown only once during this bulk download."

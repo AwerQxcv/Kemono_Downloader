@@ -116,7 +116,7 @@ async function fetchPostData(service, userID, pageID, signal) {
   const post = data && data.post ? data.post : data;
   if (!post || !post.id) throw new PostNotFoundError(pageID);
 
-  const { images, attachments } = classifyFiles(post);
+  const { images, attachments, kemonoSkipped } = classifyFiles(post);
 
   return {
     service: service,
@@ -128,6 +128,7 @@ async function fetchPostData(service, userID, pageID, signal) {
     published: post.published || post.added || '',
     images: images,
     attachments: attachments,
+    kemonoSkipped: kemonoSkipped,
   };
 }
 
@@ -217,14 +218,19 @@ function classifyFiles(post) {
 
   const images = [];
   const attachments = [];
+  let kemonoSkipped = 0; // 받지 않고 건너뛴 kemono 파일 수 (모두 이미지가 아니므로 첨부파일)
   for (const file of files) {
     const name = decodeHtmlEntities(file.name || '');
     // 원본을 받을 수 없는 파일은 임시 주소(temp_url)가 없으면 썸네일 주소로 받음
     //   preview_only: 사이트에 원본이 없고 미리보기(썸네일)만 있는 파일
     //   origin이 kemono인 이미지: kemono에서 가져온 파일. 원본이 kemono 파일 서버에 있어 그쪽이 닫히면 거의 항상 실패함
-    //   (이미지가 아니면 썸네일도 없으므로 원본 주소로 시도)
+    // origin이 kemono인데 이미지가 아닌 파일은 썸네일도 없고 원본도 실패만 반복하므로 아예 받지 않음
     const isImage = IMAGE_EXTENSIONS.has(getExtension(name || file.path));
     const tempUrl = getTempUrl(file);
+    if (!isImage && !tempUrl && isKemonoOrigin(post, file)) {
+      kemonoSkipped++;
+      continue;
+    }
     // 썸네일로 받는 이유. 'missing'(원본 없음) / 'kemono'(kemono에서 가져옴) / false(원본으로 받음)
     const previewOnly = tempUrl ? false
       : file.preview_only === true ? 'missing'
@@ -238,12 +244,13 @@ function classifyFiles(post) {
     };
     (isImage ? images : attachments).push(entry);
   }
-  return { images, attachments };
+  return { images, attachments, kemonoSkipped };
 }
 
-// kemono에서 가져온 파일인지 (파일에 origin이 없으면 게시글의 origin을 따름). kemono 사이트 자체에서는 해당 없음
+// 원본으로 받지 않을 kemono 파일인지 (파일에 origin이 없으면 게시글의 origin을 따름). kemono 사이트 자체에서는 해당 없음
+// kemono 파일 서버가 닫혀 있어서 설정(cbSkipKemonoOrigin, 기본 켜짐)이 켜져 있으면 이미지는 썸네일로 받고 나머지는 건너뜀
 function isKemonoOrigin(post, file) {
-  if (location.hostname.startsWith('kemono.')) return false;
+  if (globalThis.cbSkipKemonoOrigin === false || location.hostname.startsWith('kemono.')) return false;
   return (file.origin || post.origin) === 'kemono';
 }
 
@@ -551,6 +558,7 @@ async function main(str) {
   globalThis.txtImagesPath = str.txtImagesPath;
   globalThis.txtAttachmentsPath = str.txtAttachmentsPath;
   globalThis.cbRemoveDupByUrl = str.cbRemoveDupByUrl;
+  globalThis.cbSkipKemonoOrigin = str.cbSkipKemonoOrigin !== false; // 설정 전(undefined)에는 켜진 것으로 봄
   const delay = parseInt(str.numDownloadDelay);
   globalThis.numDownloadDelay = isNaN(delay) || delay < 0 ? 150 : delay; // 파일 간 다운로드 지연 시간 (ms)
 
@@ -618,7 +626,8 @@ async function downloadPost(str) {
     ...(str.cbDlImages == true ? postData.images : []),
     ...(str.cbDlAttachments == true ? postData.attachments : []),
   ].filter((file) => file.previewOnly);
-  if (previewFiles.length > 0) warnPreviewOnly(previewFiles);
+  const skipped = str.cbDlAttachments == true ? postData.kemonoSkipped : 0; // 건너뛴 파일은 모두 첨부파일
+  if (previewFiles.length > 0 || skipped > 0) warnPreviewOnly(previewFiles, skipped);
 
   try {
     if (str.cbDlText == true) {
@@ -638,22 +647,32 @@ async function downloadPost(str) {
   return batchId;
 }
 
-function warnPreviewOnly(previewFiles) {
+// skipped: origin이 kemono라서 받지 않고 건너뛴 파일 수
+function warnPreviewOnly(previewFiles, skipped) {
   const counts = { missing: 0, kemono: 0 };
   for (const file of previewFiles) counts[file.previewOnly]++;
-  debugLog(`게시글 ${postData.pageID}: 미리보기(썸네일)로 받는 파일 ${previewFiles.length}개 (원본 없음 ${counts.missing}, kemono ${counts.kemono})`);
-  let reasons = Object.keys(counts).filter((reason) => counts[reason] > 0);
+  debugLog(`게시글 ${postData.pageID}: 미리보기(썸네일)로 받는 파일 ${previewFiles.length}개 (원본 없음 ${counts.missing}, kemono ${counts.kemono}), kemono라서 건너뛴 파일 ${skipped}개`);
+  let reasons = Object.keys(counts).filter((reason) => counts[reason] > 0 || (reason === 'kemono' && skipped > 0));
   if (creatorRun) {
     reasons = reasons.filter((reason) => !creatorRun.previewWarned.has(reason));
     if (reasons.length === 0) return;
     reasons.forEach((reason) => creatorRun.previewWarned.add(reason));
   }
   const lines = reasons.map((reason) => chrome.i18n.getMessage(reason === 'kemono' ? 'notify_preview_kemono_body' : 'notify_preview_only_body'));
-  lines.push(chrome.i18n.getMessage('notify_preview_quality'));
+  if (previewFiles.length > 0) lines.push(chrome.i18n.getMessage('notify_preview_quality'));
+  let stats;
+  if (creatorRun) {
+    stats = chrome.i18n.getMessage('notify_preview_only_once');
+  } else {
+    const parts = [];
+    if (previewFiles.length > 0) parts.push(chrome.i18n.getMessage('notify_preview_only_count', [previewFiles.length.toString()]));
+    if (skipped > 0) parts.push(chrome.i18n.getMessage('notify_kemono_skipped_count', [skipped.toString()]));
+    stats = parts.join(' · ');
+  }
   showToast(
     '⚠️ ' + chrome.i18n.getMessage('notify_preview_only_title'),
     lines.join('\n'),
-    creatorRun ? chrome.i18n.getMessage('notify_preview_only_once') : chrome.i18n.getMessage('notify_preview_only_count', [previewFiles.length.toString()]),
+    stats,
     'warning'
   );
 }
@@ -961,7 +980,7 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
   // 기존 다운로드 트리거 (getImage 메시지)
   if (request.message === "getImage") {
     chrome.storage.local.get(
-      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numDownloadDelay", "txtNotificationFormat"],
+      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numDownloadDelay", "txtNotificationFormat"],
       function (str) {
         if (str.txtBasePath == undefined) {
           const version = browser.runtime.getManifest().version;

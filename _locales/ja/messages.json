@@ -28,6 +28,9 @@
   "options_remove_duplicates_by_url": {
     "message": "同じURLをダウンロードしない"
   },
+  "options_skip_kemono_origin": {
+    "message": "kemono から取り込まれたファイルを元ファイルでダウンロードしない"
+  },
   "options_download_path": {
     "message": "保存先を設定"
   },
@@ -157,6 +160,9 @@
   "help_remove_duplicates_by_url": {
     "message": "もし<b>チェック</b>されていたら画像または添付ファイルが同じURLで複数ダウンロードされないようにします。"
   },
+  "help_skip_kemono_origin": {
+    "message": "pawchive で kemono から取り込まれたファイル (origin: kemono) は、kemono のファイルサーバーが停止中のため元ファイルのダウンロードがほぼ必ず失敗します。<ul><li><b>有効</b> - 画像はプレビュー (サムネイル) でダウンロードし、それ以外のファイルはスキップします。</li><li><b>無効</b> - kemono のファイルサーバーが復旧したら、オフにして元ファイルでダウンロードします。</li></ul>"
+  },
   "help_base_path": {
     "message": "ファイルがダウンロードされる保存先を指定します。<br/>保存先は「ぷラウザーの保存先」＋「基本保存先」＋「○○保存先」順で保存先が指定され、フォルダーの区分には「/」を使います。<br/>このマクロには<u>一般マクロ</u>と<u>時刻マクロ</u>を使用してください。"
   },
@@ -204,7 +210,7 @@
     "message": "元ファイルをダウンロードできないファイルはプレビュー画像でダウンロード"
   },
   "update_notes_v133_preview_desc": {
-    "message": "サイトに元ファイルがなくプレビューだけが残っているファイル (preview_only) と、kemono から取り込まれたファイル (origin が kemono。kemono のファイルサーバーが停止中のためほぼ必ず失敗) は、ダウンロードできない元ファイルのアドレスの代わりにプレビュー (サムネイル) 画像でダウンロードします。該当するファイルがあると通知し、作者の一括ダウンロードでは 1 回だけ通知してそのまま続行します。 画像・添付ファイル名の設定に $Thumbnail$ マクロを入れると、このようなファイル名に _Thumbnail が付きます (例: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)。"
+    "message": "サイトに元ファイルがなくプレビューだけが残っているファイル (preview_only) は、ダウンロードできない元ファイルのアドレスの代わりにプレビュー (サムネイル) 画像でダウンロードします。kemono から取り込まれたファイル (origin が kemono) は kemono のファイルサーバーが停止中のためほぼ必ず失敗するので、画像はプレビューでダウンロードし、それ以外のファイルはスキップします。 設定の「kemono から取り込まれたファイルを元ファイルでダウンロードしない」をオフにすると元ファイルでダウンロードします (既定はオン)。該当するファイルがあると通知し、作者の一括ダウンロードでは 1 回だけ通知してそのまま続行します。 画像・添付ファイル名の設定に $Thumbnail$ マクロを入れると、このようなファイル名に _Thumbnail が付きます (例: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)。"
   },
   "update_notes_v133_stuck_title": {
     "message": "再試行するファイルが長時間進まない問題を修正"
@@ -459,7 +465,7 @@
     "message": "$1/$2 件ダウンロード、$3 件キャンセル"
   },
   "notify_preview_only_title": {
-    "message": "元ファイルの代わりにプレビューでダウンロードするファイルがあります"
+    "message": "元ファイルでダウンロードしないファイルがあります"
   },
   "notify_preview_only_body": {
     "message": "サイトに元ファイルがないファイルは、プレビュー (サムネイル) 画像としてダウンロードします。"
@@ -468,10 +474,13 @@
     "message": "元ファイルより画質が低い場合があります。"
   },
   "notify_preview_kemono_body": {
-    "message": "kemono から取り込まれたファイル (origin: kemono) は、kemono のファイルサーバーが停止中のため元ファイルではなくプレビュー (サムネイル) 画像としてダウンロードします。"
+    "message": "kemono から取り込まれたファイル (origin: kemono) は、kemono のファイルサーバーが停止中のため元ファイルではダウンロードしません。画像はプレビュー (サムネイル) でダウンロードし、それ以外のファイルはスキップします。"
   },
   "notify_preview_only_count": {
     "message": "プレビューでダウンロードするファイル $1 件"
+  },
+  "notify_kemono_skipped_count": {
+    "message": "スキップした kemono ファイル $1 件"
   },
   "notify_preview_only_once": {
     "message": "理由ごとに、今回の一括ダウンロードで 1 回だけ表示されます。"
