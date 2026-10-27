@@ -1,9 +1,12 @@
 // === 설정 ===
 const DEFAULT_MAX_RETRY = 5;
 const RETRY_DELAY = 3000; // 3초
-// 받은 양이 이 시간 동안 그대로면 멈춘 다운로드로 보고 취소 후 다시 시도
-const STALL_TIMEOUT = 120000; // 2분
-const STALL_CHECK_INTERVAL = 15000; // 15초마다 확인
+// 시작 후 이 시간 동안 한 바이트도 못 받으면 서버가 응답하지 않는 것으로 보고 취소 후 다시 시도
+const NO_RESPONSE_TIMEOUT = 30000; // 30초
+// 받는 도중 받은 양이 이 시간 동안 그대로면 멈춘 다운로드로 보고 취소 후 다시 시도
+const STALL_TIMEOUT = 60000; // 1분
+const STALL_CHECK_INTERVAL = 5000; // 5초마다 확인
+const STATUS_LOG_INTERVAL = 15000; // 상태 로그는 15초마다만
 
 // 콘솔 디버그 로그 (문제 확인용, about:debugging → 이 확장 → 검사). 끄려면 false
 const DEBUG_LOG = true;
@@ -505,13 +508,18 @@ chrome.downloads.onChanged.addListener((delta) => {
 
 // === 멈춘 다운로드 감지 ===
 // 서버가 응답을 멈추면 브라우저 다운로드가 오류 없이 "진행 중"으로 남아,
-// 그 파일이 자리를 계속 차지하고 배치도 끝나지 않음. 받은 양이 STALL_TIMEOUT 동안 그대로면 취소하고 재시도.
+// 그 파일이 자리를 계속 차지하고 배치도 끝나지 않음. 처음부터 응답이 없으면 NO_RESPONSE_TIMEOUT,
+// 받는 도중 멈추면 STALL_TIMEOUT 뒤에 취소하고 재시도.
 // onChanged 이벤트를 놓쳐 이미 끝난 다운로드가 "진행 중"으로 남은 경우도 여기서 정리됨
+let lastStatusLogAt = 0;
 async function checkStalledDownloads() {
   if (downloadToItemMap.size === 0 && downloadQueue.length === 0) return;
-  debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent}), 대기열 ${downloadQueue.length}개, 배치 ${batchMap.size}개`);
-
   const now = Date.now();
+  if (now - lastStatusLogAt >= STATUS_LOG_INTERVAL) {
+    lastStatusLogAt = now;
+    debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent}), 대기열 ${downloadQueue.length}개, 배치 ${batchMap.size}개`);
+  }
+
   for (const [downloadId, item] of Array.from(downloadToItemMap)) {
     if (item.status !== 'in_progress' || item.stalled) continue;
     let info;
@@ -537,8 +545,10 @@ async function checkStalledDownloads() {
     } else if (info.bytesReceived !== item.lastBytes) {
       item.lastBytes = info.bytesReceived;
       item.lastProgressAt = now;
-    } else if (now - item.lastProgressAt > STALL_TIMEOUT) {
-      debugLog(`멈춤 감지 #${downloadId}: ${item.filename} (${Math.round((now - item.lastProgressAt) / 1000)}초 동안 ${info.bytesReceived} bytes에서 변화 없음) → 취소 후 재시도`);
+    } else if (now - item.lastProgressAt > (info.bytesReceived > 0 ? STALL_TIMEOUT : NO_RESPONSE_TIMEOUT)) {
+      // 아직 한 바이트도 못 받았으면 서버 무응답으로 보고 더 빨리 포기
+      const reason = info.bytesReceived > 0 ? `${info.bytesReceived} bytes에서 변화 없음` : '서버 응답 없음';
+      debugLog(`멈춤 감지 #${downloadId}: ${item.filename} (${Math.round((now - item.lastProgressAt) / 1000)}초 동안 ${reason}) → 취소 후 재시도`);
       item.stalled = true;
       browser.downloads.cancel(downloadId).catch((error) => {
         console.warn('Stalled download cancel failed:', error);

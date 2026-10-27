@@ -219,7 +219,7 @@
     "message": "Automatic retry for stalled downloads"
   },
   "update_notes_v132_stall_desc": {
-    "message": "A download that makes no progress for 2 minutes because the server stopped responding is cancelled and started again. Post info requests that get no response are skipped after 30 seconds, so creator downloads no longer freeze."
+    "message": "A download is cancelled and started again if the server sends nothing for 30 seconds, or if it stops making progress for 1 minute. Post info requests that get no response are skipped after 30 seconds, so creator downloads no longer freeze."
   },
   "update_notes_v132_pace_title": {
     "message": "Up to 5 simultaneous downloads, faster skipping of downloaded posts"
