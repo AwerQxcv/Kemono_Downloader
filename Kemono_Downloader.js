@@ -154,6 +154,7 @@ function classifyFiles(post) {
     const name = decodeHtmlEntities(file.name || '');
     const entry = {
       url: getFileServer(file) + '/data' + file.path,
+      downloadUrl: getTempUrl(file), // 있으면 url 대신 이 주소로 다운로드
       name: name,
     };
     (IMAGE_EXTENSIONS.has(getExtension(name || file.path)) ? images : attachments).push(entry);
@@ -167,6 +168,15 @@ function getFileServer(file) {
   if (file.server) return file.server.replace(/\/+$/, '');
   if (file.node) return `https://n${file.node}.${location.hostname}`;
   return location.hostname.startsWith('pawchive.') ? `https://file.${location.hostname}` : location.origin;
+}
+
+// 일부 게시글(preview_only 등)은 /data 경로 대신 서명된 임시 주소(temp_url)로만 받을 수 있음
+// 만료(temp_expires)되지 않았으면 그 주소를 그대로 사용 (서명이 깨지지 않도록 ?f= 를 붙이지 않음)
+function getTempUrl(file) {
+  if (!file.temp_url) return null;
+  const expires = Date.parse(file.temp_expires);
+  if (!isNaN(expires) && expires <= Date.now()) return null;
+  return decodeHtmlEntities(file.temp_url);
 }
 
 function getExtension(fileName) {
@@ -308,7 +318,8 @@ function collectContent(type) {
 
     acc.push({
       index: validIndex++,
-      url: rawFileName ? `${urlPart}?f=${encodeURIComponent(rawFileName)}` : urlPart, // ?f= 는 서버가 원본 파일명으로 내려주게 하는 파라미터
+      // temp_url이 있으면 그대로, 아니면 ?f= (서버가 원본 파일명으로 내려주게 하는 파라미터)를 붙인 /data 주소
+      url: file.downloadUrl || `${urlPart}?f=${encodeURIComponent(rawFileName)}`,
       name: sanitizeText(finalNameOnly, false),
       extension: extension
     });
