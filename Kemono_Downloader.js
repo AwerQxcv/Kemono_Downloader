@@ -572,8 +572,10 @@ async function downloadPost(str) {
   // 완료 시점에는 사용자가 다른 페이지로 이동했거나 다음 게시글로 넘어갔을 수 있어 그때 매크로를 변환하면 엉뚱한 제목이 나옴
   const notificationText = convertMacrosInPath(str.txtNotificationFormat || '$PlatformName$ $UserName$ - $Title$');
 
-  // 작가 일괄 다운로드 중이면 결과를 모아서 마지막에 한 번만 알림 (handleBatchResult 참고)
+  // 작가 일괄 다운로드 중이면 결과를 모아서 마지막에 한 번만 알림 (handleBatchResult 참고).
+  // 게시글 하나만 받을 때는 끝날 때까지 진행 상황 알림을 띄움 (결과보다 먼저 등록해야 하므로 여기서 시작)
   if (creatorRun) creatorRun.pendingBatchIds.add(batchId);
+  else startPostProgress(batchId);
 
   // 배치 시작 알림
   chrome.runtime.sendMessage({
@@ -1056,6 +1058,46 @@ function showProgressToast(text, onCancel) {
   return { update, remove: () => toast.remove() };
 }
 
+// === 게시글 하나 다운로드 진행 표시 ===
+// batchId → { progress, timer, cancelling }. 결과(batch-result)가 오면 지우고 결과 알림을 띄움
+const postProgressToasts = new Map();
+const POST_PROGRESS_INTERVAL = 1000;
+
+function startPostProgress(batchId) {
+  const entry = { progress: null, timer: null, cancelling: false };
+  entry.progress = showProgressToast(chrome.i18n.getMessage('notify_post_progress', ['0', '0']), () => {
+    entry.cancelling = true;
+    entry.progress.update(chrome.i18n.getMessage('notify_creator_cancelling'), false);
+    debugLog(`게시글 다운로드 취소 요청: ${batchId}`);
+    chrome.runtime.sendMessage({ type: 'cancel-batches', batchIds: [batchId] });
+  });
+  entry.timer = setInterval(() => refreshPostProgress(batchId), POST_PROGRESS_INTERVAL);
+  postProgressToasts.set(batchId, entry);
+}
+
+async function refreshPostProgress(batchId) {
+  let status;
+  try {
+    status = await browser.runtime.sendMessage({ type: 'batch-status', batchIds: [batchId] });
+  } catch (error) {
+    return;
+  }
+  const entry = postProgressToasts.get(batchId);
+  if (!status || !entry || entry.cancelling) return; // 그사이 끝났거나 취소 중
+  const retrying = status.files.filter((file) => file.retryCount > 0).length;
+  let text = chrome.i18n.getMessage('notify_post_progress', [status.done.toString(), status.total.toString()]);
+  if (retrying > 0) text += '\n' + chrome.i18n.getMessage('notify_post_retrying', [retrying.toString()]);
+  entry.progress.update(text);
+}
+
+function stopPostProgress(batchId) {
+  const entry = postProgressToasts.get(batchId);
+  if (!entry) return;
+  clearInterval(entry.timer);
+  entry.progress.remove();
+  postProgressToasts.delete(batchId);
+}
+
 function handleBatchResult(result) {
   // 작가 일괄 다운로드에 속한 배치면 결과만 모으고, 실패가 있을 때만 해당 게시글 알림을 띄움
   const cancelled = result.cancelled || 0;
@@ -1067,6 +1109,17 @@ function handleBatchResult(result) {
     debugLog(`배치 결과 ${result.batchId}: 성공 ${result.success}, 실패 ${result.failed}, 취소 ${cancelled} (남은 배치 ${creatorRun.pendingBatchIds.size}개)`);
     if (result.failed > 0) showBatchResultToast(result, false); // 서버 문제 안내는 마지막 요약에 한 번만
     finishCreatorRunIfDone();
+    return;
+  }
+  stopPostProgress(result.batchId);
+  if (cancelled > 0) {
+    // 진행 알림에서 취소함
+    showToast(
+      '⏹️ ' + chrome.i18n.getMessage('notify_batch_cancelled_title'),
+      result.notificationText || '',
+      chrome.i18n.getMessage('notify_batch_stats_cancelled', [result.success.toString(), result.total.toString(), cancelled.toString()]),
+      'warning'
+    );
     return;
   }
   showBatchResultToast(result);

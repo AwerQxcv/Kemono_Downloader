@@ -197,19 +197,28 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     sendResponse({ queued: downloadQueue.length, active: activeDownloads });
 
   } else if (request.type === "batch-status") {
-    // 작가 일괄 다운로드가 끝나기를 기다리는 동안 남은 파일과 상태를 보여주는 데 사용
+    // 진행 상황 표시용: 게시글 하나 다운로드의 완료 수, 작가 일괄 다운로드 완료 대기 중의 남은 파일과 상태
+    // total / done은 결과 알림과 같은 기준 (이미지 / 첨부파일이 있으면 본문 텍스트 파일은 세지 않음)
     const now = Date.now();
     const files = [];
+    let total = 0;
+    let done = 0;
     for (const batchId of request.batchIds || []) {
       const batch = batchMap.get(batchId);
       if (!batch) continue;
+      const hasMedia = batch.items.some(item => !item.isText);
       for (const item of batch.items) {
-        if (item.status === 'complete' || item.status === 'failed' || item.status === 'cancelled') continue;
+        const finished = item.status === 'complete' || item.status === 'failed' || item.status === 'cancelled';
+        if (!(hasMedia && item.isText)) {
+          total++;
+          if (finished) done++;
+        }
+        if (finished) continue;
         const tryTime = item.tryTime + (item.status === 'in_progress' && item.attemptStartedAt ? now - item.attemptStartedAt : 0);
         files.push({ filename: item.filename, status: item.status, retryCount: item.retryCount, tryTime: tryTime });
       }
     }
-    sendResponse({ files: files, maxRetry: maxRetry });
+    sendResponse({ files: files, maxRetry: maxRetry, total: total, done: done });
 
   } else if (request.type === "cancel-batches") {
     // 작가 일괄 다운로드 취소: 해당 배치의 남은 파일을 모두 취소
