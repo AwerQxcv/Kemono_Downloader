@@ -496,7 +496,10 @@ function getSavePathAndName(type, item) {
   };
 
   const { path, prefix } = config[type];
-  let query = convertMacrosInPath(txtBasePath + "/" + path);
+  // $Thumbnail$: 미리보기로 받는 파일이면 설정한 문구(기본 "_Thumbnail"), 아니면 빈 문자열
+  // (예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail). 문구 안의 일반 매크로도 바뀌도록 먼저 넣음
+  const thumbnailText = item.thumbnail ? txtThumbnailText.replace(/[\/\\]/g, '_') : '';
+  let query = convertMacrosInPath(txtBasePath + "/" + path.replaceAll('$Thumbnail$', thumbnailText));
 
   // Search $PrefixCounter$ or $PrefixCounter#X$
   const counterRegex = new RegExp(`\\$${prefix}Counter(?:#(\\d+))?\\$`, 'g');
@@ -506,8 +509,6 @@ function getSavePathAndName(type, item) {
     return padValue ? indexStr.padStart(Number(padValue), "0") : indexStr;
   });
 
-  // $Thumbnail$: 미리보기로 받는 파일이면 "_Thumbnail", 아니면 빈 문자열 (예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)
-  query = query.replaceAll('$Thumbnail$', item.thumbnail ? '_Thumbnail' : '');
   return query.replaceAll(`$${prefix}Name$`, item.name) + item.extension;
 }
 
@@ -559,6 +560,7 @@ async function main(str) {
   globalThis.txtAttachmentsPath = str.txtAttachmentsPath;
   globalThis.cbRemoveDupByUrl = str.cbRemoveDupByUrl;
   globalThis.cbSkipKemonoOrigin = str.cbSkipKemonoOrigin !== false; // 설정 전(undefined)에는 켜진 것으로 봄
+  globalThis.txtThumbnailText = str.txtThumbnailText ?? '_Thumbnail'; // $Thumbnail$ 매크로에 들어갈 문구
   const delay = parseInt(str.numDownloadDelay);
   globalThis.numDownloadDelay = isNaN(delay) || delay < 0 ? 150 : delay; // 파일 간 다운로드 지연 시간 (ms)
 
@@ -980,7 +982,7 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
   // 기존 다운로드 트리거 (getImage 메시지)
   if (request.message === "getImage") {
     chrome.storage.local.get(
-      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numDownloadDelay", "txtNotificationFormat"],
+      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "txtThumbnailText", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numDownloadDelay", "txtNotificationFormat"],
       function (str) {
         if (str.txtBasePath == undefined) {
           const version = browser.runtime.getManifest().version;
