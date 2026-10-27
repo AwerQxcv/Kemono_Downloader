@@ -53,6 +53,10 @@
         <input type="number" id="numDownloadDelay" min="0" max="60000" step="50" value="150" style="width: 80px;">
       </div>
       <div class="input-group">
+        <label id="lblMaxConcurrent" for="numMaxConcurrent" data-l10n-id="options_max_concurrent">Maximum simultaneous downloads (0 = unlimited)</label>
+        <input type="number" id="numMaxConcurrent" min="0" max="99" value="0" style="width: 80px;">
+      </div>
+      <div class="input-group">
         <label id="lblConflictAction" for="selConflictAction" data-l10n-id="options_conflict_action">If a file with the same name already exists</label>
         <select id="selConflictAction">
           <option value="uniquify" data-l10n-id="options_conflict_uniquify">Save with a new name (e.g. 001(1).jpg)</option>

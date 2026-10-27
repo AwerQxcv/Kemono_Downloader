@@ -242,6 +242,9 @@
   "help_retry_count": {
     "message": "ダウンロード失敗時に自動的にリトライする最大回数を指定します。<br/><b>0</b>に設定すると自動リトライが無効になります。"
   },
+  "options_max_concurrent": {
+    "message": "最大同時ダウンロード数 (0 = 無制限)"
+  },
   "options_download_delay": {
     "message": "ダウンロード間の待機時間 (ms)"
   },
