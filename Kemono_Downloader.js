@@ -23,7 +23,7 @@ const PLATFORM_NAMES = {
 };
 
 const CREATOR_PAGE_SIZE = 50; // 작가 게시글 목록 API는 o(offset)를 50 단위로 받음
-const CREATOR_POST_INTERVAL = 1000; // 작가 일괄 다운로드 시 게시글 사이 대기 시간 (ms). 서버 429 방지용
+const CREATOR_POST_INTERVAL = 500; // 작가 일괄 다운로드 시 게시글 사이 대기 시간 (ms). 서버 429 방지용
 const RATE_LIMIT_RETRY = 5; // 429(요청 너무 많음)일 때 재시도 횟수
 const RATE_LIMIT_WAIT = 5000; // 429일 때 기본 대기 시간 (ms). 재시도할수록 늘어남
 const RATE_LIMIT_MAX_WAIT = 60000; // 429일 때 한 번에 기다리는 최대 시간 (Retry-After가 너무 길어도 이만큼만)
@@ -1075,7 +1075,8 @@ function showBatchResultToast(result, withHint = true) {
       hint
     );
   }
-}
+}
+
 
 // === 다운로드 기록 표시 ===
 // 게시글별 다운로드 결과(event_page.js의 "p:<service/user/post>" 항목)를 페이지에 표시
