@@ -194,32 +194,47 @@
   "update_notes_new": {
     "message": "新機能"
   },
-  "update_notes_new_title": {
-    "message": "新機能"
-  },
-  "update_notes_new_desc": {
-    "message": "v1.2.7 : このバージョンでの新機能はありません。"
-  },
   "update_notes_imp": {
     "message": "改善された機能"
   },
-  "update_notes_imp_title": {
-    "message": "改善された機能"
+  "update_notes_v130_creator_title": {
+    "message": "クリエイターページから全投稿を一括ダウンロード"
   },
-  "update_notes_imp_desc": {
-    "message": "v1.2.7 : このバージョンでの改善はありません。"
+  "update_notes_v130_creator_desc": {
+    "message": "クリエイターページでショートカットまたは右クリックメニューを使うと、そのクリエイターの全投稿をまとめてダウンロードします。開始前の確認、進捗表示とキャンセルボタンに対応し、サーバーがリクエストを制限した場合は少し待ってから再試行します。"
   },
-  "update_notes_fix_title": {
-    "message": "修正されたバグ"
+  "update_notes_v130_concurrent_title": {
+    "message": "最大同時ダウンロード数の設定"
   },
-  "update_notes_fix_desc": {
-    "message": "v1.2.8 : 投稿日時のマクロが正しく動作しないことがありました。修正いたしました。なお、それでもダウンロードがすぐに失敗する場合は、pawchive本文中のダウンロードリンクをクリックして、人間であることを確認するページが表示されるか確認してください。表示された場合は、認証を完了してから再度拡張機能をご使用ください。"
+  "update_notes_v130_concurrent_desc": {
+    "message": "同時にダウンロードするファイル数を設定できます。1にすると、ファイルを1つずつ順番にダウンロードします。(0 = 無制限)"
+  },
+  "update_notes_v130_api_title": {
+    "message": "投稿情報をAPIから取得"
+  },
+  "update_notes_v130_api_desc": {
+    "message": "ページ(HTML)を読み取る代わりにサイトのAPIから投稿情報を取得するため、サイトの画面が変わっても安定して動作します。画像と添付ファイルは拡張子で区別します。"
+  },
+  "update_notes_v130_server_title": {
+    "message": "ファイルサーバーの自動選択"
+  },
+  "update_notes_v130_server_desc": {
+    "message": "ファイルごとに保存されているサーバー(n1、n2、fileなど)や一時ダウンロードURLを自動で選んでダウンロードします。"
+  },
+  "update_notes_v130_toast_title": {
+    "message": "通知表示の不具合を修正"
+  },
+  "update_notes_v130_toast_desc": {
+    "message": "別のページに移動した後にダウンロードすると、通知が画面右端に文字だけで表示される問題を修正しました。"
   },
   "update_notes_bug_report": {
     "message": "🐛 バグ報告"
   },
   "update_notes_history_toggle": {
     "message": "以前のアップデート履歴を表示"
+  },
+  "update_notes_history_v128": {
+    "message": "v1.2.8 — 投稿日時のマクロが正しく動作しない問題を修正"
   },
   "update_notes_history_v126": {
     "message": "v1.2.6 — 不思議なほどKemonoと似ているサイトでもダウンロードできるようにしました。"

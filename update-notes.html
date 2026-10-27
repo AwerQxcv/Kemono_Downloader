@@ -42,24 +42,40 @@
                 <li class="change-item">
                     <span class="tag new">New</span>
                     <div class="change-text">
-                        <p data-l10n-id="update_notes_new_title">새로운 기능 제목</p>
-                        <span class="sub" data-l10n-id="update_notes_new_desc">간단한 부연 설명이 들어가는 자리입니다.</span>
+                        <p data-l10n-id="update_notes_v130_creator_title">작가 페이지에서 전체 게시글 일괄 다운로드</p>
+                        <span class="sub" data-l10n-id="update_notes_v130_creator_desc">작가 페이지에서 단축키나 우클릭 메뉴를 사용하면 작가의 모든 게시글을 한 번에 다운로드합니다. 시작 전 확인 창, 진행 상황 표시와 취소 버튼을 지원하며, 서버가 요청을 제한하면 잠시 기다렸다가 다시 시도합니다.</span>
+                    </div>
+                </li>
+
+                <li class="change-item">
+                    <span class="tag new">New</span>
+                    <div class="change-text">
+                        <p data-l10n-id="update_notes_v130_concurrent_title">최대 동시 다운로드 수 설정</p>
+                        <span class="sub" data-l10n-id="update_notes_v130_concurrent_desc">설정에서 동시에 받을 파일 수를 정할 수 있습니다. 1로 두면 파일 하나가 끝난 뒤 다음 파일을 받습니다. (0 = 제한 없음)</span>
                     </div>
                 </li>
 
                 <li class="change-item">
                     <span class="tag imp">Imp</span>
                     <div class="change-text">
-                        <p data-l10n-id="update_notes_imp_title">개선된 기능 제목</p>
-                        <span class="sub" data-l10n-id="update_notes_imp_desc">어떤 점이 달라졌는지 한 줄로 설명합니다.</span>
+                        <p data-l10n-id="update_notes_v130_api_title">게시글 정보를 API로 가져오기</p>
+                        <span class="sub" data-l10n-id="update_notes_v130_api_desc">페이지(HTML)를 읽는 대신 사이트 API로 게시글 정보를 가져와 사이트 화면이 바뀌어도 안정적으로 동작합니다. 이미지와 첨부파일은 확장자로 구분합니다.</span>
+                    </div>
+                </li>
+
+                <li class="change-item">
+                    <span class="tag imp">Imp</span>
+                    <div class="change-text">
+                        <p data-l10n-id="update_notes_v130_server_title">파일 서버 자동 선택</p>
+                        <span class="sub" data-l10n-id="update_notes_v130_server_desc">파일마다 저장된 서버(n1, n2, file 등)와 임시 다운로드 주소를 자동으로 골라 다운로드합니다.</span>
                     </div>
                 </li>
 
                 <li class="change-item">
                     <span class="tag fix">Fix</span>
                     <div class="change-text">
-                        <p data-l10n-id="update_notes_fix_title">수정된 버그 제목</p>
-                        <span class="sub" data-l10n-id="update_notes_fix_desc">재현 조건이나 영향 범위를 간략히 적습니다.</span>
+                        <p data-l10n-id="update_notes_v130_toast_title">알림 표시 오류 수정</p>
+                        <span class="sub" data-l10n-id="update_notes_v130_toast_desc">다른 페이지로 이동한 뒤 다운로드하면 알림이 화면 오른쪽에 글자만 붙어서 나오던 문제를 수정했습니다.</span>
                     </div>
                 </li>
             </ul>
@@ -69,6 +85,10 @@
         <details class="history-section">
             <summary class="history-toggle" data-l10n-id="update_notes_history_toggle">이전 업데이트 내역 펼치기</summary>
             <div class="history-list">
+                <div class="history-item">
+                    <span class="tag fix">Fix</span>
+                    <span class="history-text" data-l10n-id="update_notes_history_v128">v1.2.8 — 게시글 업로드 시각 매크로가 올바르지 않던 문제 수정</span>
+                </div>
                 <div class="history-item">
                     <span class="tag new">New</span>
                     <span class="history-text" data-l10n-id="update_notes_history_v126">v1.2.6 — 다운로드 완료 후 알림 설정

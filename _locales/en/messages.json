@@ -194,32 +194,47 @@
   "update_notes_new": {
     "message": "New"
   },
-  "update_notes_new_title": {
-    "message": "New Feature"
-  },
-  "update_notes_new_desc": {
-    "message": "v1.2.7 : In this version, there are no new features."
-  },
   "update_notes_imp": {
     "message": "Improvement"
   },
-  "update_notes_imp_title": {
-    "message": "Improvement"
+  "update_notes_v130_creator_title": {
+    "message": "Download all posts from a creator page"
   },
-  "update_notes_imp_desc": {
-    "message": "v1.2.7 : No improvements in this version."
+  "update_notes_v130_creator_desc": {
+    "message": "Use the shortcut or right-click menu on a creator page to download every post from that creator at once. Includes a confirmation prompt, a progress display with a cancel button, and an automatic wait-and-retry when the server limits requests."
   },
-  "update_notes_fix_title": {
-    "message": "Fixed Bugs"
+  "update_notes_v130_concurrent_title": {
+    "message": "Maximum simultaneous downloads setting"
   },
-  "update_notes_fix_desc": {
-    "message": "v1.2.8 : The upload time of the post was displayed incorrectly. We have fixed this. Separately, if the download fails immediately, please click the download link in the body of the post on pawchive and check if a page appears to verify that you are human. If it does, please complete the verification and then use the extension again."
+  "update_notes_v130_concurrent_desc": {
+    "message": "Set how many files download at the same time. Set it to 1 to download files one after another. (0 = unlimited)"
+  },
+  "update_notes_v130_api_title": {
+    "message": "Post data now comes from the API"
+  },
+  "update_notes_v130_api_desc": {
+    "message": "Post information is read from the site API instead of the page HTML, so downloads keep working when the site layout changes. Images and attachments are separated by file extension."
+  },
+  "update_notes_v130_server_title": {
+    "message": "Automatic file server selection"
+  },
+  "update_notes_v130_server_desc": {
+    "message": "Each file is downloaded from the server it is stored on (n1, n2, file, etc.) or from its temporary download link."
+  },
+  "update_notes_v130_toast_title": {
+    "message": "Fixed notification display"
+  },
+  "update_notes_v130_toast_desc": {
+    "message": "Fixed notifications appearing as plain text stuck to the right edge after moving to another page."
   },
   "update_notes_bug_report": {
     "message": "🐛 Report a Bug"
   },
   "update_notes_history_toggle": {
     "message": "View previous update history"
+  },
+  "update_notes_history_v128": {
+    "message": "v1.2.8 — Fixed the post upload time macro showing the wrong time"
   },
   "update_notes_history_v126": {
     "message": "v1.2.6 — Added support for downloading from pawchive.st, a site suspiciously similar to Kemono."

@@ -6,7 +6,7 @@ const PATH_CONFIG = {
   txtAttachmentsPath: '$AttName$',
   numRetryCount: 5,
   numDownloadDelay: 150,
-  numMaxConcurrent: 0,
+  numMaxConcurrent: 3,
   selConflictAction: 'uniquify',
   txtNotificationFormat: '$PlatformName$ $UserName$ - $Title$'
 }
