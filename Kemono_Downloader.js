@@ -1005,9 +1005,14 @@ function createToastContainer() {
   }
   // 사이트가 페이지 이동 중 body/head를 다시 그리면서 컨테이너나 스타일을 지울 수 있음.
   // 스타일이 <head>에서만 지워지면 알림이 스타일 없이 화면 오른쪽에 붙어 나오므로,
-  // 스타일을 컨테이너 안에 함께 넣고 호출할 때마다 둘 다 있는지 확인함
-  if (!container.querySelector('#kd-toast-style')) {
-    container.prepend(createToastStyle());
+  // 스타일을 컨테이너 안에 함께 넣고 호출할 때마다 둘 다 있는지 확인함.
+  // 확장을 업데이트해도 새로고침 전까지는 예전 버전이 만든 스타일이 남아 있으므로 내용이 다르면 바꿈
+  const style = createToastStyle();
+  const oldStyle = container.querySelector('#kd-toast-style');
+  if (!oldStyle) {
+    container.prepend(style);
+  } else if (oldStyle.textContent !== style.textContent) {
+    oldStyle.replaceWith(style);
   }
   if (!container.isConnected) {
     document.body.appendChild(container);
@@ -1051,25 +1056,30 @@ function createToastStyle() {
       padding-right: 36px;
     }
     .kd-toast-close {
+      all: unset;
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 22px;
-      height: 22px;
-      padding: 0;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
+      top: 10px;
+      right: 12px;
+      width: 16px;
+      height: 16px;
       color: #fff;
-      font-size: 16px;
-      line-height: 22px;
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 16px;
       text-align: center;
-      opacity: 0.7;
+      opacity: 0.75;
       cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease;
     }
     .kd-toast-close:hover {
       opacity: 1;
-      background: rgba(255, 255, 255, 0.18);
+      transform: scale(1.15);
+    }
+    .kd-toast-close:focus-visible {
+      opacity: 1;
+      outline: 1px solid rgba(255, 255, 255, 0.7);
+      outline-offset: 2px;
+      border-radius: 3px;
     }
     .kd-toast.kd-success {
       background: linear-gradient(135deg, rgba(40, 167, 69, 0.93), rgba(28, 120, 50, 0.93));
