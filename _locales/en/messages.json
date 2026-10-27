@@ -207,7 +207,7 @@
     "message": "Fixed files waiting to be retried not making progress for a long time"
   },
   "update_notes_v133_stuck_desc": {
-    "message": "If the browser did not start a download within 30 seconds (for example when saving to a NAS), or never confirmed that a stalled download was cancelled, that file kept its slot and held up other files. Now the next files start and that file is retried."
+    "message": "If the browser did not start a download within 30 seconds (for example when saving to a NAS), or never confirmed that a stalled download was cancelled, that file kept its slot and held up other files. Now the next files start and that file is retried. Files waiting to be retried now have their own line and use only one slot while new files are waiting, so files on an unresponsive server no longer slow down the rest."
   },
   "update_notes_v132_exclude_title": {
     "message": "Exclude posts by keyword in creator downloads"
