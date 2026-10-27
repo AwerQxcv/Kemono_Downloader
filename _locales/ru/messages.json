@@ -358,5 +358,17 @@
   },
   "notify_download_history_cleared": {
     "message": "История скачанных файлов очищена."
+  },
+  "options_export_download_history": {
+    "message": "Экспортировать историю загрузок"
+  },
+  "options_import_download_history": {
+    "message": "Импортировать историю загрузок"
+  },
+  "notify_download_history_imported": {
+    "message": "Импортировано записей: файлов — $1, постов — $2."
+  },
+  "notify_download_history_import_failed": {
+    "message": "Не удалось прочитать файл. Выберите файл истории, экспортированный этим расширением."
   }
 }

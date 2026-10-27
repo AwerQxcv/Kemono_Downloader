@@ -358,5 +358,17 @@
   },
   "notify_download_history_cleared": {
     "message": "ダウンロード済みファイルの記録を消去しました。"
+  },
+  "options_export_download_history": {
+    "message": "ダウンロード記録をエクスポート"
+  },
+  "options_import_download_history": {
+    "message": "ダウンロード記録をインポート"
+  },
+  "notify_download_history_imported": {
+    "message": "ファイル記録 $1 件、投稿記録 $2 件をインポートしました。"
+  },
+  "notify_download_history_import_failed": {
+    "message": "ファイルを読み込めませんでした。この拡張機能でエクスポートした記録ファイルを選択してください。"
   }
 }

@@ -358,5 +358,17 @@
   },
   "notify_download_history_cleared": {
     "message": "Downloaded file history cleared."
+  },
+  "options_export_download_history": {
+    "message": "Export downloaded file history"
+  },
+  "options_import_download_history": {
+    "message": "Import downloaded file history"
+  },
+  "notify_download_history_imported": {
+    "message": "Imported $1 file records and $2 post records."
+  },
+  "notify_download_history_import_failed": {
+    "message": "Could not read the file. Choose a history file exported from this extension."
   }
 }

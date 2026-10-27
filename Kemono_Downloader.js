@@ -506,7 +506,12 @@ async function downloadPost(str) {
   if (creatorRun) creatorRun.pendingBatchIds.add(batchId);
 
   // 배치 시작 알림
-  chrome.runtime.sendMessage({ type: "batch-start", batchId: batchId, notificationText: notificationText });
+  chrome.runtime.sendMessage({
+    type: "batch-start",
+    batchId: batchId,
+    notificationText: notificationText,
+    postKey: `${postData.service}/${postData.userID}/${postData.pageID}`, // 게시글별 다운로드 기록용
+  });
 
   const usedNames = new Set(); // 이번 배치에서 이미 쓴 파일 경로 (makeUniqueInBatch 참고)
 

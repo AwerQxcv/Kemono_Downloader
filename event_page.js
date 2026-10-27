@@ -16,7 +16,10 @@ let maxConcurrent = DEFAULT_MAX_CONCURRENT;
 const SKIP_MODES = ['off', 'record', 'history'];
 let skipMode = 'off';
 const downloadedFiles = new Set();
-let saveDownloadedTimer = null;
+// 게시글별 마지막 다운로드 결과 { "service/user/post": { status: 'complete' | 'partial' | 'failed', time } }
+// 게시글 / 작가 페이지에서 받은 적 있는지 표시할 때 사용
+const downloadedPosts = new Map();
+let saveRecordsTimer = null;
 
 // 0은 "재시도 안 함"을 뜻하는 유효한 값이므로 || 대신 NaN/음수일 때만 기본값 사용
 function parseRetryCount(value) {
@@ -38,16 +41,15 @@ function parseConflictAction(value) {
 }
 
 // storage에서 재시도 횟수 / 중복 파일 처리 방식 / 최대 동시 다운로드 수 로드
-chrome.storage.local.get(['numRetryCount', 'selConflictAction', 'numMaxConcurrent', 'selSkipDownloaded', 'downloadedFiles'], (data) => {
+chrome.storage.local.get(['numRetryCount', 'selConflictAction', 'numMaxConcurrent', 'selSkipDownloaded', 'downloadedFiles', 'downloadedPosts'], (data) => {
   if (data.numRetryCount !== undefined) {
     maxRetry = parseRetryCount(data.numRetryCount);
   }
   conflictAction = parseConflictAction(data.selConflictAction);
   maxConcurrent = parseMaxConcurrent(data.numMaxConcurrent);
   skipMode = parseSkipMode(data.selSkipDownloaded);
-  if (Array.isArray(data.downloadedFiles)) {
-    for (const key of data.downloadedFiles) downloadedFiles.add(key);
-  }
+  mergeDownloadedFiles(data.downloadedFiles);
+  mergeDownloadedPosts(data.downloadedPosts);
   pumpQueue();
 });
 
@@ -63,9 +65,17 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (changes.selSkipDownloaded) {
     skipMode = parseSkipMode(changes.selSkipDownloaded.newValue);
   }
-  // 설정 페이지의 "기록 지우기"는 빈 배열을 저장함
-  if (changes.downloadedFiles && Array.isArray(changes.downloadedFiles.newValue) && changes.downloadedFiles.newValue.length === 0) {
-    downloadedFiles.clear();
+  // 설정 페이지의 "기록 지우기"는 빈 값을, "기록 가져오기"는 합친 기록을 저장함
+  // (자기가 저장한 값도 여기로 오지만 이미 가진 항목이라 합쳐도 그대로)
+  if (changes.downloadedFiles) {
+    const files = changes.downloadedFiles.newValue;
+    if (Array.isArray(files) && files.length === 0) downloadedFiles.clear();
+    else mergeDownloadedFiles(files);
+  }
+  if (changes.downloadedPosts) {
+    const posts = changes.downloadedPosts.newValue;
+    if (posts && typeof posts === 'object' && Object.keys(posts).length === 0) downloadedPosts.clear();
+    else mergeDownloadedPosts(posts);
   }
   if (changes.numMaxConcurrent) {
     maxConcurrent = parseMaxConcurrent(changes.numMaxConcurrent.newValue);
@@ -135,6 +145,7 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
     // 배치 등록
     batchMap.set(request.batchId, {
       tabId: tabId,
+      postKey: request.postKey || null, // "service/user/post" (게시글별 기록용)
       dispatched: false,
       notificationText: request.notificationText || '',
       items: []
@@ -173,17 +184,47 @@ function downloadedKey(filename) {
   return filename.replace(/\\/g, '/').toLowerCase();
 }
 
+function mergeDownloadedFiles(files) {
+  if (!Array.isArray(files)) return;
+  for (const key of files) {
+    if (typeof key === 'string') downloadedFiles.add(key);
+  }
+}
+
+// 같은 게시글이면 더 나중 기록을 남김
+function mergeDownloadedPosts(posts) {
+  if (!posts || typeof posts !== 'object') return;
+  for (const [key, record] of Object.entries(posts)) {
+    if (!record || typeof record.status !== 'string') continue;
+    const current = downloadedPosts.get(key);
+    if (!current || (record.time || 0) > (current.time || 0)) downloadedPosts.set(key, record);
+  }
+}
+
+// 파일마다 저장하면 일괄 다운로드 때 너무 자주 쓰므로 모아서 저장
+function scheduleSaveRecords() {
+  clearTimeout(saveRecordsTimer);
+  saveRecordsTimer = setTimeout(() => {
+    chrome.storage.local.set({
+      downloadedFiles: Array.from(downloadedFiles),
+      downloadedPosts: Object.fromEntries(downloadedPosts),
+    });
+  }, 1000);
+}
+
 function markDownloaded(filename, done) {
   const key = downloadedKey(filename);
   if (done ? downloadedFiles.has(key) : !downloadedFiles.has(key)) return;
   if (done) downloadedFiles.add(key);
   else downloadedFiles.delete(key);
+  scheduleSaveRecords();
+}
 
-  // 파일마다 저장하면 일괄 다운로드 때 너무 자주 쓰므로 모아서 저장
-  clearTimeout(saveDownloadedTimer);
-  saveDownloadedTimer = setTimeout(() => {
-    chrome.storage.local.set({ downloadedFiles: Array.from(downloadedFiles) });
-  }, 1000);
+// 게시글 하나(배치)의 결과 기록. 받을 파일이 없던 게시글은 기록하지 않음
+function markPost(postKey, success, failed) {
+  const status = failed === 0 ? 'complete' : success > 0 ? 'partial' : 'failed';
+  downloadedPosts.set(postKey, { status: status, time: Date.now() });
+  scheduleSaveRecords();
 }
 
 
@@ -366,6 +407,8 @@ function checkBatchCompletion(batchId) {
   const failedItems = items
     .filter(i => i.status === 'failed')
     .map(i => ({ url: i.url, filename: i.filename, error: i.error }));
+
+  if (batch.postKey && total > 0) markPost(batch.postKey, success, failed);
 
   // 콘텐츠 스크립트에 결과 전송 (토스트 알림 표시용)
   if (batch.tabId) {
