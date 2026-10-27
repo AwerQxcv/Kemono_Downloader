@@ -28,6 +28,9 @@
   "options_remove_duplicates_by_url": {
     "message": "Remove duplicates by URL"
   },
+  "options_skip_kemono_origin": {
+    "message": "Don't download kemono-origin files as originals"
+  },
   "options_download_path": {
     "message": "Paths for file downloads"
   },
@@ -109,6 +112,9 @@
   "macro_desc_att_name": {
     "message": "Original attachment name"
   },
+  "macro_desc_thumbnail": {
+    "message": "_Thumbnail if the file is downloaded as a preview (thumbnail) instead of the original, otherwise empty. Example: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail"
+  },
   "macro_desc_year": {
     "message": "Year"
   },
@@ -154,6 +160,9 @@
   "help_remove_duplicates_by_url": {
     "message": "If the list of downloaded files (images or attachments) contains several files that are downloaded from the same address, this setting will affect the download: <ul><li><b>Enabled</b> - the file will be downloaded only once;</li><li><b>Disabled</b> - a copy of the file will be downloaded and saved.</li></ul>"
   },
+  "help_skip_kemono_origin": {
+    "message": "On pawchive, files brought over from kemono (origin: kemono) almost always fail to download as originals because kemono's file server is down.<ul><li><b>Enabled</b> - images are downloaded as previews (thumbnails), other files are skipped.</li><li><b>Disabled</b> - turn this off to download originals once kemono's file server is back.</li></ul>"
+  },
   "help_base_path": {
     "message": "The first, general part of the path where downloaded files will be saved. Depending on the content type, the corresponding part from the fields below will be appended to it, thus forming the full path and file name for saving.<br/>Macros are supported. When downloading files, macros will be replaced with the current values according to their description in the table at the bottom of the page. Only <u>general macros</u> and <u>time macros</u> can be used in this field."
   },
@@ -198,10 +207,10 @@
     "message": "Improvement"
   },
   "update_notes_v133_preview_title": {
-    "message": "Files without an original are downloaded as previews"
+    "message": "Files whose originals can't be downloaded are saved as previews"
   },
   "update_notes_v133_preview_desc": {
-    "message": "Files that only have a preview left on the site (preview_only) are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. A notification tells you when this happens; in creator downloads it appears only once and the download continues."
+    "message": "Files that only have a preview left on the site (preview_only) are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. Files brought over from kemono (origin is kemono) almost always fail because kemono's file server is down, so their images are downloaded as previews and other files are skipped. Turn off \"Don't download kemono-origin files as originals\" in Settings to download originals (on by default). A notification tells you when this happens; in creator downloads it appears only once and the download continues. Add the $Thumbnail$ macro to the image or attachment file name to mark these files with _Thumbnail (e.g. $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)."
   },
   "update_notes_v133_stuck_title": {
     "message": "Fixed files waiting to be retried not making progress for a long time"
@@ -214,6 +223,12 @@
   },
   "update_notes_v133_status_desc": {
     "message": "When downloads pause for a moment, the progress notification now says why: the queue is full and the next post is waiting, or the server looks overloaded and downloads are resting (with the time until they resume)."
+  },
+  "update_notes_v133_close_title": {
+    "message": "Download result notifications stay until you close them"
+  },
+  "update_notes_v133_close_desc": {
+    "message": "The result notification shown when a download finishes or is cancelled no longer disappears on its own. Close it with the × button in the top right. Other notifications also have a × button so you can close them right away."
   },
   "update_notes_v132_exclude_title": {
     "message": "Exclude posts by keyword in creator downloads"
@@ -410,6 +425,9 @@
   "button_cancel": {
     "message": "Cancel"
   },
+  "button_close": {
+    "message": "Close"
+  },
   "prompt_creator_exclude": {
     "message": "Download $1 posts from this creator.\nPosts whose title contains any of the keywords below are skipped. Separate keywords with commas (,), or leave empty to download everything. (e.g. WIP, draft)"
   },
@@ -447,22 +465,31 @@
     "message": "$1/$2 downloaded, $3 cancelled"
   },
   "notify_preview_only_title": {
-    "message": "Some files have no original"
+    "message": "Some files are not downloaded as originals"
   },
   "notify_preview_only_body": {
-    "message": "Files whose originals are not on the site are downloaded as preview (thumbnail) images. They may be lower quality than the original."
+    "message": "Files whose originals are not on the site are downloaded as preview (thumbnail) images."
+  },
+  "notify_preview_quality": {
+    "message": "They may be lower quality than the original."
+  },
+  "notify_preview_kemono_body": {
+    "message": "Files brought over from kemono (origin: kemono) are not downloaded as originals because kemono's file server is down. Images are downloaded as previews (thumbnails), and other files are skipped."
   },
   "notify_preview_only_count": {
     "message": "$1 files downloaded as previews"
   },
+  "notify_kemono_skipped_count": {
+    "message": "$1 kemono files skipped"
+  },
   "notify_preview_only_once": {
-    "message": "This notice is shown only once per creator download."
+    "message": "Each reason is shown only once during this bulk download."
   },
   "notify_status_paused": {
-    "message": "⏸ Server seems overloaded, pausing ($1s left)"
+    "message": "⏸ Server seems overloaded, pausing\n($1s left)"
   },
   "notify_status_queue_full": {
-    "message": "⏸ Queue is full, waiting before the next post (queue $1 · retrying $2)"
+    "message": "⏸ Queue is full, waiting before the next post\n(queue $1 · retrying $2)"
   },
   "notify_status_waiting_turn": {
     "message": "⏸ Waiting for earlier downloads to finish"

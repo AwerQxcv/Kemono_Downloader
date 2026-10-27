@@ -28,6 +28,9 @@
   "options_remove_duplicates_by_url": {
     "message": "중복된 URL을 다운로드 하지 않음"
   },
+  "options_skip_kemono_origin": {
+    "message": "kemono에서 가져온 파일은 원본으로 받지 않음"
+  },
   "options_download_path": {
     "message": "다운로드 경로 설정"
   },
@@ -109,6 +112,9 @@
   "macro_desc_att_name": {
     "message": "원본 첨부파일 이름"
   },
+  "macro_desc_thumbnail": {
+    "message": "원본 대신 미리보기(썸네일)로 받는 파일이면 _Thumbnail, 아니면 빈 칸. 예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail"
+  },
   "macro_desc_year": {
     "message": "연"
   },
@@ -154,6 +160,9 @@
   "help_remove_duplicates_by_url": {
     "message": "만약 이미지 혹은 첨부파일이 같은 주소로 여러번 다운로드 된다면 해당 기능을 참고하십시오.<ul><li><b>활성화</b> - 같은 주소의 파일은 한 번만 다운로드합니다.</li><li><b>비활성화</b> - 같은 주소의 파일이라도 여러번 다운로드 합니다.</li></ul>"
   },
+  "help_skip_kemono_origin": {
+    "message": "pawchive에서 kemono로부터 가져온 파일(origin: kemono)은 kemono 파일 서버가 닫혀 있어 원본 다운로드가 거의 항상 실패합니다.<ul><li><b>활성화</b> - 이미지는 미리보기(썸네일)로 받고, 그 밖의 파일은 건너뜁니다.</li><li><b>비활성화</b> - kemono 파일 서버가 다시 열렸다면 끄고 원본으로 받습니다.</li></ul>"
+  },
   "help_base_path": {
     "message": "파일이 다운로드 될 기본 경로를 지정합니다.<br/>\"브라우저 기본 경로\"+\"기본 다운로드 경로\"+\"~파일 경로\" 순으로 경로가 지정되며, 폴더 구분은 '/' 를 사용합니다.<br/>해당 매크로에는 <u>일반 매크로</u>와 <u>시간 매크로</u>만을 사용해주세요."
   },
@@ -198,10 +207,10 @@
     "message": "개선된 기능"
   },
   "update_notes_v133_preview_title": {
-    "message": "원본이 없는 파일은 미리보기 이미지로 다운로드"
+    "message": "원본을 받을 수 없는 파일은 미리보기 이미지로 다운로드"
   },
   "update_notes_v133_preview_desc": {
-    "message": "사이트에 원본이 없고 미리보기만 남은 파일(preview_only)은 받을 수 없는 원본 주소 대신 미리보기(썸네일) 이미지로 받습니다. 이런 파일이 있으면 알림으로 알려주며, 작가 일괄 다운로드에서는 한 번만 알리고 계속 진행합니다."
+    "message": "사이트에 원본이 없고 미리보기만 남은 파일(preview_only)은 받을 수 없는 원본 주소 대신 미리보기(썸네일) 이미지로 받습니다. kemono에서 가져온 파일(origin이 kemono)은 kemono 파일 서버가 닫혀 있어 거의 항상 실패하므로, 이미지는 미리보기로 받고 그 밖의 파일은 건너뜁니다. 설정의 \"kemono에서 가져온 파일은 원본으로 받지 않음\"을 끄면 원본으로 받습니다(기본은 켜짐). 이런 파일이 있으면 알림으로 알려주며, 작가 일괄 다운로드에서는 한 번만 알리고 계속 진행합니다. 이미지·첨부파일 이름 설정에 $Thumbnail$ 매크로를 넣으면 이런 파일 이름에 _Thumbnail이 붙습니다(예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)."
   },
   "update_notes_v133_stuck_title": {
     "message": "재시도할 파일이 오래 진행되지 않던 문제 수정"
@@ -214,6 +223,12 @@
   },
   "update_notes_v133_status_desc": {
     "message": "다운로드가 잠시 멈추면 진행 알림에 그 이유를 함께 보여줍니다. 대기열이 가득 차서 다음 게시글을 기다리는 중인지, 서버 과부하로 보여 잠시 쉬는 중인지(다시 시작까지 남은 시간 포함) 알 수 있습니다."
+  },
+  "update_notes_v133_close_title": {
+    "message": "다운로드 결과 알림은 직접 닫을 때까지 표시"
+  },
+  "update_notes_v133_close_desc": {
+    "message": "다운로드가 끝나거나 취소되었을 때 나오는 결과 알림은 저절로 사라지지 않고, 오른쪽 위의 × 버튼을 눌러 닫을 수 있습니다. 다른 알림에도 × 버튼이 있어 바로 닫을 수 있습니다."
   },
   "update_notes_v132_exclude_title": {
     "message": "작가 일괄 다운로드에서 키워드로 게시글 제외"
@@ -410,6 +425,9 @@
   "button_cancel": {
     "message": "취소"
   },
+  "button_close": {
+    "message": "닫기"
+  },
   "prompt_creator_exclude": {
     "message": "이 작가의 게시글 $1개를 다운로드합니다.\n제목에 아래 키워드가 들어간 게시글은 받지 않습니다. 여러 개는 쉼표(,)로 구분하고, 비워 두면 모두 받습니다. (예: WIP, 진행중)"
   },
@@ -447,22 +465,31 @@
     "message": "$1/$2개 받음, $3개 취소"
   },
   "notify_preview_only_title": {
-    "message": "원본이 없는 파일이 있습니다"
+    "message": "원본으로 받지 않는 파일이 있습니다"
   },
   "notify_preview_only_body": {
-    "message": "사이트에 원본이 없는 파일은 미리보기(썸네일) 이미지로 받습니다. 원본보다 화질이 낮을 수 있습니다."
+    "message": "사이트에 원본이 없는 파일은 미리보기(썸네일) 이미지로 받습니다."
+  },
+  "notify_preview_quality": {
+    "message": "원본보다 화질이 낮을 수 있습니다."
+  },
+  "notify_preview_kemono_body": {
+    "message": "kemono에서 가져온 파일(origin: kemono)은 kemono 파일 서버가 닫혀 있어 원본으로 받지 않습니다. 이미지는 미리보기(썸네일)로 받고, 그 밖의 파일은 건너뜁니다."
   },
   "notify_preview_only_count": {
     "message": "미리보기로 받는 파일 $1개"
   },
+  "notify_kemono_skipped_count": {
+    "message": "건너뛴 kemono 파일 $1개"
+  },
   "notify_preview_only_once": {
-    "message": "이 안내는 이번 일괄 다운로드에서 한 번만 표시됩니다."
+    "message": "이유마다 이번 일괄 다운로드에서 한 번만 표시됩니다."
   },
   "notify_status_paused": {
-    "message": "⏸ 서버 과부하로 보여 잠시 쉬는 중 ($1초 뒤 다시 시작)"
+    "message": "⏸ 서버 과부하로 보여 잠시 쉬는 중\n($1초 뒤 다시 시작)"
   },
   "notify_status_queue_full": {
-    "message": "⏸ 대기열이 가득 차서 다음 게시글을 기다리는 중 (대기열 $1 · 재시도 $2)"
+    "message": "⏸ 대기열이 가득 차서 다음 게시글을 기다리는 중\n(대기열 $1 · 재시도 $2)"
   },
   "notify_status_waiting_turn": {
     "message": "⏸ 앞의 다운로드가 끝나기를 기다리는 중"

@@ -116,7 +116,7 @@ async function fetchPostData(service, userID, pageID, signal) {
   const post = data && data.post ? data.post : data;
   if (!post || !post.id) throw new PostNotFoundError(pageID);
 
-  const { images, attachments } = classifyFiles(post);
+  const { images, attachments, kemonoSkipped } = classifyFiles(post);
 
   return {
     service: service,
@@ -128,6 +128,7 @@ async function fetchPostData(service, userID, pageID, signal) {
     published: post.published || post.added || '',
     images: images,
     attachments: attachments,
+    kemonoSkipped: kemonoSkipped,
   };
 }
 
@@ -217,21 +218,40 @@ function classifyFiles(post) {
 
   const images = [];
   const attachments = [];
+  let kemonoSkipped = 0; // 받지 않고 건너뛴 kemono 파일 수 (모두 이미지가 아니므로 첨부파일)
   for (const file of files) {
     const name = decodeHtmlEntities(file.name || '');
-    // preview_only: 사이트에 원본이 없고 미리보기(썸네일)만 있는 파일. /data 주소로는 받을 수 없으므로
-    // 임시 주소(temp_url)가 없으면 썸네일 주소로 받음
+    // 원본을 받을 수 없는 파일은 임시 주소(temp_url)가 없으면 썸네일 주소로 받음
+    //   preview_only: 사이트에 원본이 없고 미리보기(썸네일)만 있는 파일
+    //   origin이 kemono인 이미지: kemono에서 가져온 파일. 원본이 kemono 파일 서버에 있어 그쪽이 닫히면 거의 항상 실패함
+    // origin이 kemono인데 이미지가 아닌 파일은 썸네일도 없고 원본도 실패만 반복하므로 아예 받지 않음
+    const isImage = IMAGE_EXTENSIONS.has(getExtension(name || file.path));
     const tempUrl = getTempUrl(file);
-    const previewOnly = file.preview_only === true && !tempUrl; // 썸네일로 받는 파일
+    if (!isImage && !tempUrl && isKemonoOrigin(post, file)) {
+      kemonoSkipped++;
+      continue;
+    }
+    // 썸네일로 받는 이유. 'missing'(원본 없음) / 'kemono'(kemono에서 가져옴) / false(원본으로 받음)
+    const previewOnly = tempUrl ? false
+      : file.preview_only === true ? 'missing'
+      : isImage && isKemonoOrigin(post, file) ? 'kemono'
+      : false;
     const entry = {
       url: getFileServer(file) + '/data' + file.path,
       downloadUrl: tempUrl || (previewOnly ? getThumbnailUrl(file) : null), // 있으면 url 대신 이 주소로 다운로드
       name: name,
       previewOnly: previewOnly,
     };
-    (IMAGE_EXTENSIONS.has(getExtension(name || file.path)) ? images : attachments).push(entry);
+    (isImage ? images : attachments).push(entry);
   }
-  return { images, attachments };
+  return { images, attachments, kemonoSkipped };
+}
+
+// 원본으로 받지 않을 kemono 파일인지 (파일에 origin이 없으면 게시글의 origin을 따름). kemono 사이트 자체에서는 해당 없음
+// kemono 파일 서버가 닫혀 있어서 설정(cbSkipKemonoOrigin, 기본 켜짐)이 켜져 있으면 이미지는 썸네일로 받고 나머지는 건너뜀
+function isKemonoOrigin(post, file) {
+  if (globalThis.cbSkipKemonoOrigin === false || location.hostname.startsWith('kemono.')) return false;
+  return (file.origin || post.origin) === 'kemono';
 }
 
 // 파일이 저장된 서버 주소. API 응답의 server(전체 주소)나 node(서버 번호, 2면 n2.도메인)를 사용
@@ -398,7 +418,8 @@ function collectContent(type) {
       // temp_url이 있으면 그대로, 아니면 ?f= (서버가 원본 파일명으로 내려주게 하는 파라미터)를 붙인 /data 주소
       url: file.downloadUrl || `${urlPart}?f=${encodeURIComponent(rawFileName)}`,
       name: sanitizeText(finalNameOnly, false),
-      extension: extension
+      extension: extension,
+      thumbnail: !!file.previewOnly, // 원본 대신 미리보기(썸네일)로 받는 파일 ($Thumbnail$ 매크로)
     });
 
     return acc;
@@ -485,6 +506,8 @@ function getSavePathAndName(type, item) {
     return padValue ? indexStr.padStart(Number(padValue), "0") : indexStr;
   });
 
+  // $Thumbnail$: 미리보기로 받는 파일이면 "_Thumbnail", 아니면 빈 문자열 (예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)
+  query = query.replaceAll('$Thumbnail$', item.thumbnail ? '_Thumbnail' : '');
   return query.replaceAll(`$${prefix}Name$`, item.name) + item.extension;
 }
 
@@ -535,6 +558,7 @@ async function main(str) {
   globalThis.txtImagesPath = str.txtImagesPath;
   globalThis.txtAttachmentsPath = str.txtAttachmentsPath;
   globalThis.cbRemoveDupByUrl = str.cbRemoveDupByUrl;
+  globalThis.cbSkipKemonoOrigin = str.cbSkipKemonoOrigin !== false; // 설정 전(undefined)에는 켜진 것으로 봄
   const delay = parseInt(str.numDownloadDelay);
   globalThis.numDownloadDelay = isNaN(delay) || delay < 0 ? 150 : delay; // 파일 간 다운로드 지연 시간 (ms)
 
@@ -597,12 +621,13 @@ async function downloadPost(str) {
 
   const usedNames = new Set(); // 이번 배치에서 이미 쓴 파일 경로 (makeUniqueInBatch 참고)
 
-  // 원본 없이 미리보기로 받는 파일이 있으면 알림 (작가 일괄 다운로드에서는 한 번만)
-  const previewCount = [
+  // 원본 대신 미리보기로 받는 파일이 있으면 이유별로 알림 (작가 일괄 다운로드에서는 이유마다 한 번만)
+  const previewFiles = [
     ...(str.cbDlImages == true ? postData.images : []),
     ...(str.cbDlAttachments == true ? postData.attachments : []),
-  ].filter((file) => file.previewOnly).length;
-  if (previewCount > 0) warnPreviewOnly(previewCount);
+  ].filter((file) => file.previewOnly);
+  const skipped = str.cbDlAttachments == true ? postData.kemonoSkipped : 0; // 건너뛴 파일은 모두 첨부파일
+  if (previewFiles.length > 0 || skipped > 0) warnPreviewOnly(previewFiles, skipped);
 
   try {
     if (str.cbDlText == true) {
@@ -622,16 +647,32 @@ async function downloadPost(str) {
   return batchId;
 }
 
-function warnPreviewOnly(count) {
-  debugLog(`게시글 ${postData.pageID}: 원본이 없는 파일 ${count}개 → 미리보기(썸네일)로 받음`);
+// skipped: origin이 kemono라서 받지 않고 건너뛴 파일 수
+function warnPreviewOnly(previewFiles, skipped) {
+  const counts = { missing: 0, kemono: 0 };
+  for (const file of previewFiles) counts[file.previewOnly]++;
+  debugLog(`게시글 ${postData.pageID}: 미리보기(썸네일)로 받는 파일 ${previewFiles.length}개 (원본 없음 ${counts.missing}, kemono ${counts.kemono}), kemono라서 건너뛴 파일 ${skipped}개`);
+  let reasons = Object.keys(counts).filter((reason) => counts[reason] > 0 || (reason === 'kemono' && skipped > 0));
   if (creatorRun) {
-    if (creatorRun.previewWarned) return;
-    creatorRun.previewWarned = true;
+    reasons = reasons.filter((reason) => !creatorRun.previewWarned.has(reason));
+    if (reasons.length === 0) return;
+    reasons.forEach((reason) => creatorRun.previewWarned.add(reason));
+  }
+  const lines = reasons.map((reason) => chrome.i18n.getMessage(reason === 'kemono' ? 'notify_preview_kemono_body' : 'notify_preview_only_body'));
+  if (previewFiles.length > 0) lines.push(chrome.i18n.getMessage('notify_preview_quality'));
+  let stats;
+  if (creatorRun) {
+    stats = chrome.i18n.getMessage('notify_preview_only_once');
+  } else {
+    const parts = [];
+    if (previewFiles.length > 0) parts.push(chrome.i18n.getMessage('notify_preview_only_count', [previewFiles.length.toString()]));
+    if (skipped > 0) parts.push(chrome.i18n.getMessage('notify_kemono_skipped_count', [skipped.toString()]));
+    stats = parts.join(' · ');
   }
   showToast(
     '⚠️ ' + chrome.i18n.getMessage('notify_preview_only_title'),
-    chrome.i18n.getMessage('notify_preview_only_body'),
-    creatorRun ? chrome.i18n.getMessage('notify_preview_only_once') : chrome.i18n.getMessage('notify_preview_only_count', [count.toString()]),
+    lines.join('\n'),
+    stats,
     'warning'
   );
 }
@@ -688,7 +729,7 @@ async function downloadCreator(str, page) {
     dispatchDone: false,
     pendingBatchIds: new Set(),
     skippedPosts: 0,
-    previewWarned: false, // 원본 없는 파일 안내를 이미 띄웠는지
+    previewWarned: new Set(), // 미리보기로 받는 파일 안내를 이미 띄운 이유 ('missing' / 'kemono')
     files: 0,
     filesFailed: 0,
     filesCancelled: 0,
@@ -924,7 +965,8 @@ function finishCreatorRunIfDone() {
     lines.join('\n'),
     '',
     failed || run.cancelled ? 'warning' : 'success',
-    failed ? chrome.i18n.getMessage('notify_server_issue_hint') : ''
+    failed ? chrome.i18n.getMessage('notify_server_issue_hint') : '',
+    true
   );
 }
 
@@ -938,7 +980,7 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
   // 기존 다운로드 트리거 (getImage 메시지)
   if (request.message === "getImage") {
     chrome.storage.local.get(
-      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numDownloadDelay", "txtNotificationFormat"],
+      ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "cbSkipKemonoOrigin", "numDownloadDelay", "txtNotificationFormat"],
       function (str) {
         if (str.txtBasePath == undefined) {
           const version = browser.runtime.getManifest().version;
@@ -1003,6 +1045,31 @@ function createToastStyle() {
       animation: kd-slide-in 0.4s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
       cursor: default;
       overflow: hidden;
+      position: relative;
+    }
+    .kd-toast.kd-closable {
+      padding-right: 36px;
+    }
+    .kd-toast-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #fff;
+      font-size: 16px;
+      line-height: 22px;
+      text-align: center;
+      opacity: 0.7;
+      cursor: pointer;
+    }
+    .kd-toast-close:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.18);
     }
     .kd-toast.kd-success {
       background: linear-gradient(135deg, rgba(40, 167, 69, 0.93), rgba(28, 120, 50, 0.93));
@@ -1095,11 +1162,12 @@ function createToastStyle() {
 }
 
 // hint: 맨 아래에 작게 붙는 안내 문구. 있으면 읽을 시간을 주기 위해 더 오래 표시
-function showToast(title, body, stats, type, hint = '') {
+// sticky: 다운로드 결과처럼 사용자가 닫기(×)를 누를 때까지 남겨 둘 알림. 아니면 몇 초 뒤 사라짐
+function showToast(title, body, stats, type, hint = '', sticky = false) {
   const container = createToastContainer();
 
   const toast = document.createElement('div');
-  toast.className = `kd-toast kd-${type}`;
+  toast.className = `kd-toast kd-${type} kd-closable`;
   // 게시글 제목 등이 HTML로 해석되지 않도록 textContent로 삽입 (빈 줄은 생략)
   for (const [className, text] of [['kd-toast-title', title], ['kd-toast-body', body], ['kd-toast-stats', stats], ['kd-toast-hint', hint]]) {
     if (!text) continue;
@@ -1112,13 +1180,28 @@ function showToast(title, body, stats, type, hint = '') {
   // 하단에서 상단으로 올라오는 스택형 (오래된 게 위로)
   container.appendChild(toast);
 
-  // 5초 후 페이드 아웃
-  const scheduleFadeOut = () => setTimeout(() => {
+  let closing = false;
+  const close = () => {
+    if (closing) return;
+    closing = true;
     toast.classList.add('kd-fade-out');
     toast.addEventListener('animationend', (e) => {
       if (e.animationName === 'kd-fade-out') toast.remove();
     });
-  }, hint ? 12000 : 5000);
+  };
+
+  const closeButton = document.createElement('button');
+  closeButton.className = 'kd-toast-close';
+  closeButton.textContent = '×';
+  closeButton.title = chrome.i18n.getMessage('button_close');
+  closeButton.setAttribute('aria-label', closeButton.title);
+  closeButton.addEventListener('click', close);
+  toast.appendChild(closeButton);
+
+  if (sticky) return;
+
+  // 5초 후 페이드 아웃
+  const scheduleFadeOut = () => setTimeout(close, hint ? 12000 : 5000);
 
   // 다른 탭을 보고 있는 동안 완료되면 보지도 못하고 사라지므로, 탭으로 돌아온 뒤부터 5초를 셈
   if (document.hidden) {
@@ -1226,7 +1309,8 @@ function handleBatchResult(result) {
       creatorRun.failedPosts.push(postUrl);
       debugLog(`실패한 파일 (${postUrl}):` + (result.failedItems || []).map((item) => `\n  ${item.filename} (${item.error})`).join(''));
     }
-    if (result.failed > 0) showBatchResultToast(result, false); // 서버 문제 안내는 마지막 요약에 한 번만
+    // 서버 문제 안내는 마지막 요약에 한 번만. 게시글마다 남겨 두면 쌓이므로 이 알림은 저절로 사라짐
+    if (result.failed > 0) showBatchResultToast(result, false, false);
     finishCreatorRunIfDone();
     return;
   }
@@ -1237,7 +1321,9 @@ function handleBatchResult(result) {
       '⏹️ ' + chrome.i18n.getMessage('notify_batch_cancelled_title'),
       result.notificationText || '',
       chrome.i18n.getMessage('notify_batch_stats_cancelled', [result.success.toString(), result.total.toString(), cancelled.toString()]),
-      'warning'
+      'warning',
+      '',
+      true
     );
     return;
   }
@@ -1245,7 +1331,8 @@ function handleBatchResult(result) {
 }
 
 // withHint: 실패했을 때 "사이트 서버 문제일 수 있음" 안내를 붙일지
-function showBatchResultToast(result, withHint = true) {
+// sticky: 게시글 하나를 받은 결과는 사용자가 닫을 때까지 남겨 둠
+function showBatchResultToast(result, withHint = true, sticky = true) {
   // 다운로드 시작 시점에 만들어 둔 알림 문구 사용 (main 참고)
   const notificationText = result.notificationText || '';
   const hint = withHint ? chrome.i18n.getMessage('notify_server_issue_hint') : '';
@@ -1256,7 +1343,9 @@ function showBatchResultToast(result, withHint = true) {
       'ℹ️ ' + chrome.i18n.getMessage('notify_batch_empty_title'),
       notificationText,
       '',
-      'warning'
+      'warning',
+      '',
+      sticky
     );
   } else if (result.failed === 0) {
     // 모두 성공
@@ -1264,7 +1353,9 @@ function showBatchResultToast(result, withHint = true) {
       '✅ ' + chrome.i18n.getMessage('notify_batch_complete_title'),
       notificationText,
       chrome.i18n.getMessage('notify_batch_stats_success', [result.total.toString()]),
-      'success'
+      'success',
+      '',
+      sticky
     );
   } else if (result.success > 0) {
     // 일부 실패
@@ -1273,7 +1364,8 @@ function showBatchResultToast(result, withHint = true) {
       notificationText,
       chrome.i18n.getMessage('notify_batch_stats_partial', [result.success.toString(), result.total.toString(), result.failed.toString()]),
       'warning',
-      hint
+      hint,
+      sticky
     );
   } else {
     // 전부 실패
@@ -1282,7 +1374,8 @@ function showBatchResultToast(result, withHint = true) {
       notificationText,
       chrome.i18n.getMessage('notify_batch_stats_partial', [result.success.toString(), result.total.toString(), result.failed.toString()]),
       'error',
-      hint
+      hint,
+      sticky
     );
   }
 }
