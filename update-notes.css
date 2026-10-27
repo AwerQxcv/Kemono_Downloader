@@ -199,6 +199,11 @@ h1 {
     border-bottom: 1px solid var(--border);
 }
 
+/* 버전 번호는 대문자로 바꾸지 않음 (v1.3.1) */
+.section-version {
+    text-transform: none;
+}
+
 /* ── Change list ── */
 .changes {
     list-style: none;

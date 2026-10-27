@@ -8,6 +8,7 @@ const PATH_CONFIG = {
   numDownloadDelay: 150,
   numMaxConcurrent: 3,
   selConflictAction: 'uniquify',
+  selSkipDownloaded: 'off',
   txtNotificationFormat: '$PlatformName$ $UserName$ - $Title$'
 }
 
@@ -94,6 +95,10 @@ const tooltipRegistry = {
     info: "help_conflict_action",
     containerClass: "field-header-txt"
   },
+  "lblSkipDownloaded": {
+    info: "help_skip_downloaded",
+    containerClass: "field-header-txt"
+  },
   "lblNotificationFormat": {
     info: "help_notification_format",
     warning: "warning_save_problems",
@@ -134,6 +139,7 @@ function save_settings() {
   var numMaxConcurrent = parseInt(document.getElementById("numMaxConcurrent").value);
   if (isNaN(numMaxConcurrent) || numMaxConcurrent < 0) numMaxConcurrent = PATH_CONFIG.numMaxConcurrent;
   var selConflictAction = document.getElementById("selConflictAction").value;
+  var selSkipDownloaded = document.getElementById("selSkipDownloaded").value;
   var txtNotificationFormat = document.getElementById("txtNotificationFormat").value;
 
   chrome.storage.local.set(
@@ -150,6 +156,7 @@ function save_settings() {
       numDownloadDelay: numDownloadDelay,
       numMaxConcurrent: numMaxConcurrent,
       selConflictAction: selConflictAction,
+      selSkipDownloaded: selSkipDownloaded,
       txtNotificationFormat: txtNotificationFormat,
     },
     function () {
@@ -160,7 +167,7 @@ function save_settings() {
 
 function load_settings() {
   chrome.storage.local.get(
-    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "txtNotificationFormat"],
+    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "selSkipDownloaded", "txtNotificationFormat"],
     function (load) {
       document.getElementById("cbDlText").checked = load.cbDlText;
       document.getElementById("cbDlImages").checked = load.cbDlImages;
@@ -174,6 +181,7 @@ function load_settings() {
       document.getElementById("numDownloadDelay").value = load.numDownloadDelay ?? PATH_CONFIG.numDownloadDelay;
       document.getElementById("numMaxConcurrent").value = load.numMaxConcurrent ?? PATH_CONFIG.numMaxConcurrent;
       document.getElementById("selConflictAction").value = load.selConflictAction ?? PATH_CONFIG.selConflictAction;
+      document.getElementById("selSkipDownloaded").value = load.selSkipDownloaded ?? PATH_CONFIG.selSkipDownloaded;
       document.getElementById("txtNotificationFormat").value = load.txtNotificationFormat ?? PATH_CONFIG.txtNotificationFormat;
       if (load.txtBasePath == undefined) {
         initialize_settings();
@@ -205,6 +213,7 @@ function initialize_settings() {
   document.getElementById("numDownloadDelay").value = PATH_CONFIG.numDownloadDelay;
   document.getElementById("numMaxConcurrent").value = PATH_CONFIG.numMaxConcurrent;
   document.getElementById("selConflictAction").value = PATH_CONFIG.selConflictAction;
+  document.getElementById("selSkipDownloaded").value = PATH_CONFIG.selSkipDownloaded;
   document.getElementById("txtNotificationFormat").value = PATH_CONFIG.txtNotificationFormat;
   save_settings();
   // Hide warning icons when the reset to defaults button is pressed.
@@ -536,6 +545,83 @@ function toggleWarning(inputId, show) {
 }
 
 document.getElementById("reset").addEventListener("click", initialize_settings);
+
+// 이미 받은 파일 기록 지우기 (빈 값을 저장하면 백그라운드가 기록을 비움)
+document.getElementById("clearDownloadHistory").addEventListener("click", () => {
+  const i18n = (typeof browser !== 'undefined') ? browser.i18n : chrome.i18n;
+  if (!confirm(i18n.getMessage("confirm_clear_download_history"))) return;
+  chrome.storage.local.set({ downloadedFiles: [], downloadedPosts: {} }, () => {
+    alert(i18n.getMessage("notify_download_history_cleared"));
+  });
+});
+
+// 받은 파일 / 게시글 기록 내보내기 (JSON 파일)
+const HISTORY_FILE_FORMAT = "kemono-downloader-history";
+
+document.getElementById("exportDownloadHistory").addEventListener("click", () => {
+  chrome.storage.local.get(["downloadedFiles", "downloadedPosts"], (data) => {
+    const history = {
+      format: HISTORY_FILE_FORMAT,
+      version: 1,
+      exported: new Date().toISOString(),
+      files: Array.isArray(data.downloadedFiles) ? data.downloadedFiles : [],
+      posts: data.downloadedPosts && typeof data.downloadedPosts === "object" ? data.downloadedPosts : {},
+    };
+    const blob = new Blob([JSON.stringify(history)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const date = new Date().toISOString().slice(0, 10);
+    // 설정 페이지가 about:addons 안에 들어가 있어 <a download>가 막힐 수 있으므로 downloads API 사용
+    chrome.downloads.download({ url: url, filename: `kemono-downloader-history-${date}.json`, saveAs: true }, () => {
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    });
+  });
+});
+
+// 받은 파일 / 게시글 기록 가져오기. 지금 기록에 합침 (같은 게시글은 더 나중 기록을 남김)
+document.getElementById("importDownloadHistory").addEventListener("click", () => {
+  document.getElementById("importDownloadHistoryFile").click();
+});
+
+document.getElementById("importDownloadHistoryFile").addEventListener("change", async (event) => {
+  const i18n = (typeof browser !== 'undefined') ? browser.i18n : chrome.i18n;
+  const file = event.target.files[0];
+  event.target.value = ""; // 같은 파일을 다시 고를 수 있도록
+  if (!file) return;
+
+  let history;
+  try {
+    history = JSON.parse(await file.text());
+    if (!history || history.format !== HISTORY_FILE_FORMAT) throw new Error("unknown format");
+  } catch (error) {
+    console.error("import history failed", error);
+    alert(i18n.getMessage("notify_download_history_import_failed"));
+    return;
+  }
+
+  // 백그라운드와 같은 형식(경로 구분자 /, 소문자)으로 맞춤
+  const importedFiles = (Array.isArray(history.files) ? history.files : [])
+    .filter((key) => typeof key === "string")
+    .map((key) => key.replace(/\\/g, "/").toLowerCase());
+  const importedPosts = history.posts && typeof history.posts === "object" ? history.posts : {};
+
+  chrome.storage.local.get(["downloadedFiles", "downloadedPosts"], (data) => {
+    const files = new Set(Array.isArray(data.downloadedFiles) ? data.downloadedFiles : []);
+    for (const key of importedFiles) files.add(key);
+
+    const posts = Object.assign({}, data.downloadedPosts);
+    let postCount = 0;
+    for (const [key, record] of Object.entries(importedPosts)) {
+      if (!record || typeof record.status !== "string") continue;
+      postCount++;
+      const current = posts[key];
+      if (!current || (record.time || 0) > (current.time || 0)) posts[key] = record;
+    }
+
+    chrome.storage.local.set({ downloadedFiles: Array.from(files), downloadedPosts: posts }, () => {
+      alert(i18n.getMessage("notify_download_history_imported", [importedFiles.length.toString(), postCount.toString()]));
+    });
+  });
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   localizeHtmlPage(); // UI 텍스트를 먼저 지역화합니다.

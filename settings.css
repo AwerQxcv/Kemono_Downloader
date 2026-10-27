@@ -123,6 +123,7 @@ h4 {
 /* 버튼 영역 */
 .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 20px;
 }
@@ -145,6 +146,16 @@ h4 {
 
 .btn.danger:hover {
     background-color: #ffe6e6;
+}
+
+.btn.secondary {
+    background-color: #fff;
+    border: 1px solid var(--border-color);
+    color: #333;
+}
+
+.btn.secondary:hover {
+    background-color: #f3f4f6;
 }
 
 /* 업데이트 노트 링크 스타일 */

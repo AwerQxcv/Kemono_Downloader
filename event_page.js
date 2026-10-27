@@ -9,6 +9,17 @@ let conflictAction = DEFAULT_CONFLICT_ACTION;
 // 동시에 진행할 최대 다운로드 수 (0은 제한 없음, 1이면 하나가 끝나야 다음 파일 시작)
 const DEFAULT_MAX_CONCURRENT = 0;
 let maxConcurrent = DEFAULT_MAX_CONCURRENT;
+// 이미 받은 파일 건너뛰기 방식
+//   "off": 건너뛰지 않음
+//   "record": 확장이 직접 남긴 기록(downloadedFiles) 기준. 성공하면 기록하고 실패하면 지움 (기록은 방식과 상관없이 항상 남김)
+//   "history": 브라우저 다운로드 기록에 같은 경로로 완료된 다운로드가 있고 파일이 아직 남아 있으면 건너뜀
+const SKIP_MODES = ['off', 'record', 'history'];
+let skipMode = 'off';
+const downloadedFiles = new Set();
+// 게시글별 마지막 다운로드 결과 { "service/user/post": { status: 'complete' | 'partial' | 'failed', time } }
+// 게시글 / 작가 페이지에서 받은 적 있는지 표시할 때 사용
+const downloadedPosts = new Map();
+let saveRecordsTimer = null;
 
 // 0은 "재시도 안 함"을 뜻하는 유효한 값이므로 || 대신 NaN/음수일 때만 기본값 사용
 function parseRetryCount(value) {
@@ -21,17 +32,24 @@ function parseMaxConcurrent(value) {
   return isNaN(n) || n < 0 ? DEFAULT_MAX_CONCURRENT : n;
 }
 
+function parseSkipMode(value) {
+  return SKIP_MODES.includes(value) ? value : 'off';
+}
+
 function parseConflictAction(value) {
   return value === 'overwrite' || value === 'uniquify' ? value : DEFAULT_CONFLICT_ACTION;
 }
 
 // storage에서 재시도 횟수 / 중복 파일 처리 방식 / 최대 동시 다운로드 수 로드
-chrome.storage.local.get(['numRetryCount', 'selConflictAction', 'numMaxConcurrent'], (data) => {
+chrome.storage.local.get(['numRetryCount', 'selConflictAction', 'numMaxConcurrent', 'selSkipDownloaded', 'downloadedFiles', 'downloadedPosts'], (data) => {
   if (data.numRetryCount !== undefined) {
     maxRetry = parseRetryCount(data.numRetryCount);
   }
   conflictAction = parseConflictAction(data.selConflictAction);
   maxConcurrent = parseMaxConcurrent(data.numMaxConcurrent);
+  skipMode = parseSkipMode(data.selSkipDownloaded);
+  mergeDownloadedFiles(data.downloadedFiles);
+  mergeDownloadedPosts(data.downloadedPosts);
   pumpQueue();
 });
 
@@ -43,6 +61,21 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
   if (changes.selConflictAction) {
     conflictAction = parseConflictAction(changes.selConflictAction.newValue);
+  }
+  if (changes.selSkipDownloaded) {
+    skipMode = parseSkipMode(changes.selSkipDownloaded.newValue);
+  }
+  // 설정 페이지의 "기록 지우기"는 빈 값을, "기록 가져오기"는 합친 기록을 저장함
+  // (자기가 저장한 값도 여기로 오지만 이미 가진 항목이라 합쳐도 그대로)
+  if (changes.downloadedFiles) {
+    const files = changes.downloadedFiles.newValue;
+    if (Array.isArray(files) && files.length === 0) downloadedFiles.clear();
+    else mergeDownloadedFiles(files);
+  }
+  if (changes.downloadedPosts) {
+    const posts = changes.downloadedPosts.newValue;
+    if (posts && typeof posts === 'object' && Object.keys(posts).length === 0) downloadedPosts.clear();
+    else mergeDownloadedPosts(posts);
   }
   if (changes.numMaxConcurrent) {
     maxConcurrent = parseMaxConcurrent(changes.numMaxConcurrent.newValue);
@@ -112,6 +145,7 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
     // 배치 등록
     batchMap.set(request.batchId, {
       tabId: tabId,
+      postKey: request.postKey || null, // "service/user/post" (게시글별 기록용)
       dispatched: false,
       notificationText: request.notificationText || '',
       items: []
@@ -144,8 +178,80 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
 });
 
 
+// === 받은 파일 기록 ===
+// 저장 경로 기준 (Windows는 대소문자를 구분하지 않고 구분자가 \\ 일 수 있으므로 통일)
+function downloadedKey(filename) {
+  return filename.replace(/\\/g, '/').toLowerCase();
+}
+
+function mergeDownloadedFiles(files) {
+  if (!Array.isArray(files)) return;
+  for (const key of files) {
+    if (typeof key === 'string') downloadedFiles.add(key);
+  }
+}
+
+// 같은 게시글이면 더 나중 기록을 남김
+function mergeDownloadedPosts(posts) {
+  if (!posts || typeof posts !== 'object') return;
+  for (const [key, record] of Object.entries(posts)) {
+    if (!record || typeof record.status !== 'string') continue;
+    const current = downloadedPosts.get(key);
+    if (!current || (record.time || 0) > (current.time || 0)) downloadedPosts.set(key, record);
+  }
+}
+
+// 파일마다 저장하면 일괄 다운로드 때 너무 자주 쓰므로 모아서 저장
+function scheduleSaveRecords() {
+  clearTimeout(saveRecordsTimer);
+  saveRecordsTimer = setTimeout(() => {
+    chrome.storage.local.set({
+      downloadedFiles: Array.from(downloadedFiles),
+      downloadedPosts: Object.fromEntries(downloadedPosts),
+    });
+  }, 1000);
+}
+
+function markDownloaded(filename, done) {
+  const key = downloadedKey(filename);
+  if (done ? downloadedFiles.has(key) : !downloadedFiles.has(key)) return;
+  if (done) downloadedFiles.add(key);
+  else downloadedFiles.delete(key);
+  scheduleSaveRecords();
+}
+
+// 게시글 하나(배치)의 결과 기록. 받을 파일이 없던 게시글은 기록하지 않음
+function markPost(postKey, success, failed) {
+  const status = failed === 0 ? 'complete' : success > 0 ? 'partial' : 'failed';
+  downloadedPosts.set(postKey, { status: status, time: Date.now() });
+  scheduleSaveRecords();
+}
+
+
+// 브라우저 다운로드 기록에서 같은 저장 경로로 완료됐고 파일이 아직 있는 다운로드를 찾음
+// DownloadItem.filename은 다운로드 폴더를 포함한 전체 경로이므로 끝부분이 저장 경로와 같은지 비교
+async function existsInBrowserHistory(filename) {
+  const key = downloadedKey(filename);
+  const normalized = filename.replace(/\\/g, '/');
+  const baseName = normalized.substring(normalized.lastIndexOf('/') + 1);
+  try {
+    const results = await browser.downloads.search({ query: [baseName], state: 'complete' });
+    return results.some((d) => d.exists !== false && downloadedKey(d.filename).endsWith('/' + key));
+  } catch (error) {
+    console.warn('Download history search failed:', error);
+    return false;
+  }
+}
+
+async function isAlreadyDownloaded(filename) {
+  if (skipMode === 'record') return downloadedFiles.has(downloadedKey(filename));
+  if (skipMode === 'history') return existsInBrowserHistory(filename);
+  return false;
+}
+
+
 // === 다운로드 실행 및 배치 추적 ===
-function downloadAndTrack(url, filename, batchId) {
+async function downloadAndTrack(url, filename, batchId) {
   // download()는 비동기라 batch-end가 먼저 도착할 수 있으므로, 대기열에 넣기 전에 동기적으로 배치에 등록
   // (나중에 등록하면 완료 검사에서 누락되어 "0개 파일 완료" 같은 잘못된 알림이 뜸)
   const batch = batchId ? batchMap.get(batchId) : undefined;
@@ -160,6 +266,15 @@ function downloadAndTrack(url, filename, batchId) {
     holdsSlot: false
   };
   if (batch) batch.items.push(item);
+
+  // 이미 받은 파일이면 다운로드하지 않고 성공으로 처리
+  // (확인하는 동안에도 항목은 'queued' 상태로 배치에 있으므로 배치가 먼저 끝나지 않음)
+  if (await isAlreadyDownloaded(filename)) {
+    item.status = 'complete';
+    item.skipped = true;
+    if (item.batchId) checkBatchCompletion(item.batchId);
+    return;
+  }
 
   downloadQueue.push(item);
   pumpQueue();
@@ -214,6 +329,7 @@ async function startDownload(item) {
 function finishItem(item, status, error = null) {
   item.status = status;
   item.error = error;
+  markDownloaded(item.filename, status === 'complete');
   if (item.downloadId !== null) downloadToItemMap.delete(item.downloadId);
   if (item.holdsSlot) {
     item.holdsSlot = false;
@@ -291,6 +407,8 @@ function checkBatchCompletion(batchId) {
   const failedItems = items
     .filter(i => i.status === 'failed')
     .map(i => ({ url: i.url, filename: i.filename, error: i.error }));
+
+  if (batch.postKey && total > 0) markPost(batch.postKey, success, failed);
 
   // 콘텐츠 스크립트에 결과 전송 (토스트 알림 표시용)
   if (batch.tabId) {

@@ -197,6 +197,36 @@
   "update_notes_imp": {
     "message": "Improvement"
   },
+  "update_notes_v131_skip_title": {
+    "message": "Skip files that were already downloaded"
+  },
+  "update_notes_v131_skip_desc": {
+    "message": "Settings can now skip files you already downloaded, based on the extension's own record or the browser download history. A batch that stopped halfway no longer has to start over."
+  },
+  "update_notes_v131_status_title": {
+    "message": "Post download status"
+  },
+  "update_notes_v131_status_desc": {
+    "message": "Creator page cards (bottom right) and post titles now show whether a post was downloaded (✓), partly failed (⚠), or failed (✕)."
+  },
+  "update_notes_v131_history_title": {
+    "message": "Export / import download history"
+  },
+  "update_notes_v131_history_desc": {
+    "message": "Export or import the downloaded file and post history as a JSON file from Settings to keep using it in another browser."
+  },
+  "update_notes_v131_stuck_title": {
+    "message": "Fixed creator downloads stuck while waiting to finish"
+  },
+  "update_notes_v131_stuck_desc": {
+    "message": "If a file still failed after all retries, the \"Waiting for downloads to finish…\" message never went away. This is fixed."
+  },
+  "update_notes_v131_paging_title": {
+    "message": "Fixed creator downloads not starting on some creator pages"
+  },
+  "update_notes_v131_paging_desc": {
+    "message": "Requesting the page after the last one in the post list caused an error, so the download never started. This is fixed."
+  },
   "update_notes_v130_creator_title": {
     "message": "Download all posts from a creator page"
   },
@@ -334,5 +364,50 @@
   },
   "notify_creator_fetch_failed": {
     "message": "$1 posts could not be loaded"
+  },
+  "options_skip_downloaded": {
+    "message": "Skip files that were already downloaded"
+  },
+  "options_skip_off": {
+    "message": "Off (download every file again)"
+  },
+  "options_skip_record": {
+    "message": "Use the extension's own record"
+  },
+  "options_skip_history": {
+    "message": "Use the browser download history"
+  },
+  "help_skip_downloaded": {
+    "message": "Skips files that were already downloaded when downloading again.<ul><li><b>Extension record</b>: the extension remembers each file it saved successfully (failed files are removed from the record). Works even if you clear the browser's download list, but files you deleted yourself are still skipped; clear the record below if needed.</li><li><b>Browser download history</b>: checks the browser's download list for a finished download with the same file name whose file still exists on disk. Deleted files are downloaded again, but clearing the browser's download list makes everything download again.</li></ul>"
+  },
+  "options_clear_download_history": {
+    "message": "Clear downloaded file history"
+  },
+  "confirm_clear_download_history": {
+    "message": "Clear the history of downloaded files? Every file will be downloaded again next time."
+  },
+  "notify_download_history_cleared": {
+    "message": "Downloaded file history cleared."
+  },
+  "options_export_download_history": {
+    "message": "Export downloaded file history"
+  },
+  "options_import_download_history": {
+    "message": "Import downloaded file history"
+  },
+  "notify_download_history_imported": {
+    "message": "Imported $1 file records and $2 post records."
+  },
+  "notify_download_history_import_failed": {
+    "message": "Could not read the file. Choose a history file exported from this extension."
+  },
+  "status_post_complete": {
+    "message": "Downloaded"
+  },
+  "status_post_partial": {
+    "message": "Downloaded (some files failed)"
+  },
+  "status_post_failed": {
+    "message": "Download failed"
   }
 }

@@ -197,6 +197,36 @@
   "update_notes_imp": {
     "message": "改善された機能"
   },
+  "update_notes_v131_skip_title": {
+    "message": "ダウンロード済みのファイルをスキップ"
+  },
+  "update_notes_v131_skip_desc": {
+    "message": "設定で、拡張機能の記録またはブラウザのダウンロード履歴をもとに、ダウンロード済みのファイルをスキップできます。途中で止まった一括ダウンロードを最初からやり直す必要がなくなります。"
+  },
+  "update_notes_v131_status_title": {
+    "message": "投稿のダウンロード状態を表示"
+  },
+  "update_notes_v131_status_desc": {
+    "message": "作者ページのカード右下と投稿タイトルの横に、ダウンロード完了（✓）、一部失敗（⚠）、失敗（✕）を表示します。"
+  },
+  "update_notes_v131_history_title": {
+    "message": "ダウンロード記録のエクスポート / インポート"
+  },
+  "update_notes_v131_history_desc": {
+    "message": "設定から、ダウンロードしたファイルと投稿の記録を JSON ファイルとしてエクスポート・インポートでき、別のブラウザでも引き続き使えます。"
+  },
+  "update_notes_v131_stuck_title": {
+    "message": "作者の一括ダウンロードが完了待ちで止まる問題を修正"
+  },
+  "update_notes_v131_stuck_desc": {
+    "message": "再試行しても失敗したファイルがあると、「ダウンロードの完了を待っています…」の表示が消えなかった問題を修正しました。"
+  },
+  "update_notes_v131_paging_title": {
+    "message": "一部の作者ページで一括ダウンロードできない問題を修正"
+  },
+  "update_notes_v131_paging_desc": {
+    "message": "投稿一覧の最終ページの次を要求したときにエラーが起き、ダウンロードが始まらなかった問題を修正しました。"
+  },
   "update_notes_v130_creator_title": {
     "message": "クリエイターページから全投稿を一括ダウンロード"
   },
@@ -334,5 +364,50 @@
   },
   "notify_creator_fetch_failed": {
     "message": "投稿$1件を読み込めませんでした"
+  },
+  "options_skip_downloaded": {
+    "message": "ダウンロード済みのファイルをスキップ"
+  },
+  "options_skip_off": {
+    "message": "オフ（すべてのファイルを再ダウンロード）"
+  },
+  "options_skip_record": {
+    "message": "拡張機能の記録を使用"
+  },
+  "options_skip_history": {
+    "message": "ブラウザのダウンロード履歴を使用"
+  },
+  "help_skip_downloaded": {
+    "message": "再ダウンロード時に、すでにダウンロードしたファイルをスキップします。<ul><li><b>拡張機能の記録</b>：拡張機能が保存に成功したファイルを記憶します（失敗したファイルは記録から削除されます）。ブラウザのダウンロード一覧を消しても残りますが、自分で削除したファイルもスキップされるため、必要なら下のボタンで記録を消去してください。</li><li><b>ブラウザのダウンロード履歴</b>：ブラウザのダウンロード一覧から、同じファイル名で完了し、ファイルがディスクに残っている項目を探します。削除したファイルは再ダウンロードされますが、ダウンロード一覧を消すとすべて再ダウンロードされます。</li></ul>"
+  },
+  "options_clear_download_history": {
+    "message": "ダウンロード済み記録を消去"
+  },
+  "confirm_clear_download_history": {
+    "message": "ダウンロード済みファイルの記録を消去しますか？次回からすべてのファイルを再度ダウンロードします。"
+  },
+  "notify_download_history_cleared": {
+    "message": "ダウンロード済みファイルの記録を消去しました。"
+  },
+  "options_export_download_history": {
+    "message": "ダウンロード記録をエクスポート"
+  },
+  "options_import_download_history": {
+    "message": "ダウンロード記録をインポート"
+  },
+  "notify_download_history_imported": {
+    "message": "ファイル記録 $1 件、投稿記録 $2 件をインポートしました。"
+  },
+  "notify_download_history_import_failed": {
+    "message": "ファイルを読み込めませんでした。この拡張機能でエクスポートした記録ファイルを選択してください。"
+  },
+  "status_post_complete": {
+    "message": "ダウンロード済み"
+  },
+  "status_post_partial": {
+    "message": "ダウンロード済み（一部失敗）"
+  },
+  "status_post_failed": {
+    "message": "ダウンロード失敗"
   }
 }
