@@ -176,7 +176,7 @@
     "message": "画像がダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「画像の保存先」順で保存先が指定されます。<br/>このマクロには<u>一般マクロ</u>、<u>時刻マクロ</u>と<u>画像マクロ</u>を使用してください。"
   },
   "help_thumbnail_text": {
-    "message": "元ファイルの代わりにプレビュー (サムネイル) でダウンロードするファイルでは、<u>$$Thumbnail$$</u> マクロがこの文言に置き換わります。それ以外のファイルでは空欄になります。<br/>画像・添付ファイルの保存先の好きな位置に $$Thumbnail$$ を入れてください。<ul><li>$$ImageCounter#3$$$$Thumbnail$$ + <b>_Thumbnail</b> → 001_Thumbnail</li><li>$$Thumbnail$$$$ImageCounter#3$$ + <b>Thumbnail_</b> → Thumbnail_001</li></ul>"
+    "message": "画像の保存先で $$Thumbnail$$ に置き換わる文言を入力します。<br/>例) $$Thumbnail$$ が「_Thumbnail」のとき (既定値)<br/>画像の保存先 : $$ImageCounter#3$$$$Thumbnail$$<br/>予想される結果 : 001_Thumbnail<br/>$$Thumbnail$$ が「Thumbnail_」のとき<br/>画像の保存先 : $$Thumbnail$$$$ImageCounter#3$$<br/>予想される結果 : Thumbnail_001"
   },
   "help_attachments_path": {
     "message": "添付ファイルがダウンロードされる保存先を指定します。ダウンロードは「基本保存先」＋「添付ファイル保存先」順で保存先が指定されます。<br/>このマクロには<u>一般マクロ</u>、<u>時刻マクロ</u>と<u>添付ファイルマクロ</u>を使用してください。"

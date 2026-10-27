@@ -176,7 +176,7 @@
     "message": "이미지가 다운로드 될 경로를 지정합니다. 다운로드는 \"기본 다운로드 경로\"/\"이미지 저장 경로\" 입니다.<br/>해당 매크로에는 <u>일반 매크로</u>, <u>시각 매크로</u>와 <u>이미지 관련 매크로</u>를 사용해주세요."
   },
   "help_thumbnail_text": {
-    "message": "원본 대신 미리보기(썸네일)로 받는 파일에서 <u>$$Thumbnail$$</u> 매크로가 이 문구로 바뀝니다. 다른 파일에서는 빈 칸이 됩니다.<br/>이미지·첨부파일 저장 경로에서 원하는 위치에 $$Thumbnail$$을 넣어 주세요.<ul><li>$$ImageCounter#3$$$$Thumbnail$$ + <b>_Thumbnail</b> → 001_Thumbnail</li><li>$$Thumbnail$$$$ImageCounter#3$$ + <b>Thumbnail_</b> → Thumbnail_001</li></ul>"
+    "message": "이미지 저장 경로에서 $$Thumbnail$$에 변환될 문구를 입력합니다.<br/>예시) $$Thumbnail$$이 \"_Thumbnail\"일 때 (기본값)<br/>이미지 저장경로 : $$ImageCounter#3$$$$Thumbnail$$<br/>예상되는 결과 : 001_Thumbnail<br/>$$Thumbnail$$이 \"Thumbnail_\"일 때<br/>이미지 저장경로 : $$Thumbnail$$$$ImageCounter#3$$<br/>예상되는 결과 : Thumbnail_001"
   },
   "help_attachments_path": {
     "message": "첨부파일이 다운로드 될 경로를 지정합니다. 다운로드는 \"기본 다운로드 경로\"/\"첨부파일 저장 경로\" 입니다.<br/>해당 매크로에는 <u>일반 매크로</u>, <u>시각 매크로</u>와 <u>첨부파일 관련 매크로</u>를 사용해주세요."

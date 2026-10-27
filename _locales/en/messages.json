@@ -176,7 +176,7 @@
     "message": "The second part of the path is for saving images. It may optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saving, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u>, <u>time macros</u>, and <u>image macros</u> can be used for this path."
   },
   "help_thumbnail_text": {
-    "message": "For files downloaded as previews (thumbnails) instead of originals, the <u>$$Thumbnail$$</u> macro is replaced with this text. For other files it is empty.<br/>Put $$Thumbnail$$ wherever you want in the image or attachment path.<ul><li>$$ImageCounter#3$$$$Thumbnail$$ + <b>_Thumbnail</b> → 001_Thumbnail</li><li>$$Thumbnail$$$$ImageCounter#3$$ + <b>Thumbnail_</b> → Thumbnail_001</li></ul>"
+    "message": "Enter the text that $$Thumbnail$$ is replaced with in the image path.<br/>Example) When $$Thumbnail$$ is \"_Thumbnail\" (default)<br/>Image path : $$ImageCounter#3$$$$Thumbnail$$<br/>Expected result : 001_Thumbnail<br/>When $$Thumbnail$$ is \"Thumbnail_\"<br/>Image path : $$Thumbnail$$$$ImageCounter#3$$<br/>Expected result : Thumbnail_001"
   },
   "help_attachments_path": {
     "message": "The second part of the path is for saving attachments. It can optionally contain an additional path calculated relative to the base path and, necessarily, a file name.<br/>Macros are supported. When saved, macros will be replaced with the corresponding values as described in the table at the bottom of the page. Only <u>general macros</u>, <u>time macros</u>, and <u>attachment macros</u> can be used for this path."
