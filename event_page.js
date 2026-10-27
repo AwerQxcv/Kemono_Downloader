@@ -170,12 +170,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
   } else if (request.type === "download") {
     // 다운로드 실행 및 배치에 등록
-    downloadAndTrack(request.url, request.filename, request.batchId);
+    downloadAndTrack(request.url, request.filename, request.batchId, request.isText === true);
 
   } else if (request.type === "blob") {
     // Blob 다운로드 실행 및 배치에 등록
     const blobUrl = URL.createObjectURL(request.blob);
-    downloadAndTrack(blobUrl, request.filename, request.batchId);
+    downloadAndTrack(blobUrl, request.filename, request.batchId, request.isText === true);
 
   } else if (request.type === "batch-end") {
     // 배치 내 모든 다운로드 요청 전송 완료
@@ -297,7 +297,7 @@ async function isAlreadyDownloaded(filename) {
 
 
 // === 다운로드 실행 및 배치 추적 ===
-async function downloadAndTrack(url, filename, batchId) {
+async function downloadAndTrack(url, filename, batchId, isText = false) {
   // download()는 비동기라 batch-end가 먼저 도착할 수 있으므로, 대기열에 넣기 전에 동기적으로 배치에 등록
   // (나중에 등록하면 완료 검사에서 누락되어 "0개 파일 완료" 같은 잘못된 알림이 뜸)
   const batch = batchId ? batchMap.get(batchId) : undefined;
@@ -305,6 +305,7 @@ async function downloadAndTrack(url, filename, batchId) {
     url: url,
     filename: filename,
     batchId: batch ? batchId : null,
+    isText: isText, // 게시글 본문 텍스트 파일
     status: 'queued',
     error: null,
     retryCount: 0,
@@ -564,11 +565,16 @@ function checkBatchCompletion(batchId) {
   if (!allDone) return;
 
   // 결과 집계
-  const total = items.length;
-  const success = items.filter(i => i.status === 'complete').length;
-  const failed = items.filter(i => i.status === 'failed').length;
-  const cancelled = items.filter(i => i.status === 'cancelled').length;
-  const failedItems = items
+  // 본문 텍스트 파일은 확장이 직접 만든 파일이라 거의 항상 성공하므로, 이미지 / 첨부파일이 있는 게시글에서는
+  // 성공으로 세지 않음 (이미지가 전부 실패했는데 텍스트 때문에 "일부 실패"로 보이지 않도록). 실패는 그대로 셈.
+  // 텍스트만 있는 게시글은 텍스트로 판단
+  const hasMedia = items.some(i => !i.isText);
+  const counted = hasMedia ? items.filter(i => !(i.isText && i.status === 'complete')) : items;
+  const total = counted.length;
+  const success = counted.filter(i => i.status === 'complete').length;
+  const failed = counted.filter(i => i.status === 'failed').length;
+  const cancelled = counted.filter(i => i.status === 'cancelled').length;
+  const failedItems = counted
     .filter(i => i.status === 'failed')
     .map(i => ({ url: i.url, filename: i.filename, error: i.error }));
   debugLog(`배치 끝 ${batchId}: 전체 ${total}, 성공 ${success}, 실패 ${failed}, 취소 ${cancelled}`);
