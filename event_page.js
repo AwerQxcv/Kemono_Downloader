@@ -1,6 +1,15 @@
 // === 설정 ===
 const DEFAULT_MAX_RETRY = 5;
 const RETRY_DELAY = 3000; // 3초
+// 받은 양이 이 시간 동안 그대로면 멈춘 다운로드로 보고 취소 후 다시 시도
+const STALL_TIMEOUT = 120000; // 2분
+const STALL_CHECK_INTERVAL = 15000; // 15초마다 확인
+
+// 콘솔 디버그 로그 (문제 확인용, about:debugging → 이 확장 → 검사). 끄려면 false
+const DEBUG_LOG = true;
+function debugLog(...args) {
+  if (DEBUG_LOG) console.log('[KD-BG]', ...args);
+}
 
 let maxRetry = DEFAULT_MAX_RETRY;
 // 같은 이름의 파일이 있을 때 동작 ("uniquify": 001(1).jpg 처럼 새 이름, "overwrite": 덮어쓰기)
@@ -153,12 +162,10 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
 
   } else if (request.type === "download") {
     // 다운로드 실행 및 배치에 등록
-    console.log(request.filename);
     downloadAndTrack(request.url, request.filename, request.batchId);
 
   } else if (request.type === "blob") {
     // Blob 다운로드 실행 및 배치에 등록
-    console.log(request.filename);
     const blobUrl = URL.createObjectURL(request.blob);
     downloadAndTrack(blobUrl, request.filename, request.batchId);
 
@@ -169,6 +176,10 @@ chrome.runtime.onMessage.addListener(function (request, sender) {
       batch.dispatched = true;
       checkBatchCompletion(request.batchId);
     }
+
+  } else if (request.type === "cancel-batches") {
+    // 작가 일괄 다운로드 취소: 해당 배치의 남은 파일을 모두 취소
+    cancelBatches(request.batchIds || []);
 
   } else if (request.type === "set") {
     chrome.runtime.openOptionsPage(); //background.jsから発火する必要がある
@@ -267,9 +278,19 @@ async function downloadAndTrack(url, filename, batchId) {
   };
   if (batch) batch.items.push(item);
 
+  // 이미 취소된 배치에 늦게 도착한 파일
+  if (batch && batch.cancelled) {
+    item.cancelled = true;
+    finishItem(item, 'cancelled', 'CANCELLED');
+    return;
+  }
+
   // 이미 받은 파일이면 다운로드하지 않고 성공으로 처리
   // (확인하는 동안에도 항목은 'queued' 상태로 배치에 있으므로 배치가 먼저 끝나지 않음)
-  if (await isAlreadyDownloaded(filename)) {
+  const alreadyDownloaded = await isAlreadyDownloaded(filename);
+  if (item.cancelled) return; // 확인하는 동안 취소됨 (cancelItem에서 이미 처리)
+  if (alreadyDownloaded) {
+    debugLog(`건너뜀 (이미 받음): ${filename}`);
     item.status = 'complete';
     item.skipped = true;
     if (item.batchId) checkBatchCompletion(item.batchId);
@@ -277,7 +298,38 @@ async function downloadAndTrack(url, filename, batchId) {
   }
 
   downloadQueue.push(item);
+  debugLog(`대기열 추가: ${filename} (대기 ${downloadQueue.length}개, 진행 ${activeDownloads}/${maxConcurrent || '∞'})`);
   pumpQueue();
+}
+
+// 배치들의 남은 파일을 취소. 앞으로 이 배치로 들어오는 파일도 바로 취소됨
+function cancelBatches(batchIds) {
+  debugLog(`배치 ${batchIds.length}개 취소 요청`);
+  for (const batchId of batchIds) {
+    const batch = batchMap.get(batchId);
+    if (!batch) continue;
+    batch.cancelled = true;
+    // finishItem → cleanupBatch가 batch.items를 지울 수 있으므로 복사본으로 순회
+    for (const item of batch.items.slice()) cancelItem(item);
+  }
+}
+
+function cancelItem(item) {
+  if (item.status === 'complete' || item.status === 'failed' || item.status === 'cancelled') return;
+  item.cancelled = true;
+  if (item.status === 'queued' || item.status === 'retrying') {
+    // 아직 시작 전이거나 재시도 대기 중 → 바로 취소 처리
+    const index = downloadQueue.indexOf(item);
+    if (index !== -1) downloadQueue.splice(index, 1);
+    finishItem(item, 'cancelled', 'CANCELLED');
+  } else if (item.status === 'in_progress' && item.downloadId !== null) {
+    // 진행 중 → 브라우저 다운로드를 취소. onChanged(USER_CANCELED)에서 취소로 확정됨
+    browser.downloads.cancel(item.downloadId).catch((error) => {
+      console.warn('Download cancel failed:', error);
+      finishItem(item, 'cancelled', 'CANCELLED');
+    });
+  }
+  // 'starting'은 download()가 끝난 뒤 startDownload에서 취소함
 }
 
 // 자리가 남아 있는 만큼 대기열의 파일을 시작
@@ -291,6 +343,11 @@ function pumpQueue() {
 }
 
 async function startDownload(item) {
+  // 재시도 대기 중에 취소된 경우
+  if (item.cancelled) {
+    if (item.status !== 'cancelled') finishItem(item, 'cancelled', 'CANCELLED');
+    return;
+  }
   item.status = 'starting';
   let downloadId;
   try {
@@ -303,13 +360,23 @@ async function startDownload(item) {
   } catch (error) {
     console.error('Download start failed:', error);
     // 다운로드 시작 자체가 실패한 경우에도 배치에 기록
-    finishItem(item, 'failed', item.retryCount > 0 ? item.error : 'DOWNLOAD_START_FAILED');
+    if (item.cancelled) finishItem(item, 'cancelled', 'CANCELLED');
+    else finishItem(item, 'failed', item.retryCount > 0 ? item.error : 'DOWNLOAD_START_FAILED');
     return;
   }
 
   item.downloadId = downloadId;
   item.status = 'in_progress';
+  item.lastBytes = 0;
+  item.lastProgressAt = Date.now();
   downloadToItemMap.set(downloadId, item);
+  debugLog(`시작 #${downloadId}: ${item.filename}${item.retryCount > 0 ? ` (재시도 ${item.retryCount}/${maxRetry})` : ''}`);
+
+  // 시작하는 동안 취소됨 → 바로 취소 (onChanged에서 취소로 확정)
+  if (item.cancelled) {
+    browser.downloads.cancel(downloadId).catch(() => finishItem(item, 'cancelled', 'CANCELLED'));
+    return;
+  }
 
   // 서버가 바로 오류를 주면 onChanged가 위 매핑 등록보다 먼저 와서 무시될 수 있음.
   // 그러면 항목이 영원히 "진행 중"으로 남아 배치가 끝나지 않으므로, 등록 직후 현재 상태를 한 번 확인
@@ -329,6 +396,7 @@ async function startDownload(item) {
 function finishItem(item, status, error = null) {
   item.status = status;
   item.error = error;
+  debugLog(`${status === 'complete' ? '완료' : status === 'cancelled' ? '취소' : '실패'}${item.downloadId !== null ? ` #${item.downloadId}` : ''}: ${item.filename}${error ? ` (${error})` : ''}`);
   markDownloaded(item.filename, status === 'complete');
   if (item.downloadId !== null) downloadToItemMap.delete(item.downloadId);
   if (item.holdsSlot) {
@@ -352,8 +420,18 @@ function handleDownloadError(downloadId, errorReason) {
   const item = downloadToItemMap.get(downloadId);
   if (!item) return;
 
-  // 사용자가 의도적으로 취소한 경우 → 재시도하지 않음
-  if (errorReason === 'USER_CANCELED') {
+  // 일괄 다운로드 취소 → 재시도하지 않고 취소로 확정
+  if (item.cancelled) {
+    finishItem(item, 'cancelled', 'CANCELLED');
+    return;
+  }
+
+  // 멈춰서 확장이 직접 취소한 경우 → 아래에서 재시도
+  if (item.stalled) {
+    item.stalled = false;
+    errorReason = 'STALLED';
+  } else if (errorReason === 'USER_CANCELED') {
+    // 사용자가 의도적으로 취소한 경우 → 재시도하지 않음
     finishItem(item, 'failed', 'USER_CANCELED');
     return;
   }
@@ -368,6 +446,7 @@ function handleDownloadError(downloadId, errorReason) {
     downloadToItemMap.delete(downloadId);
     item.downloadId = null;
 
+    debugLog(`오류 #${downloadId}: ${item.filename} (${errorReason}) → ${RETRY_DELAY / 1000}초 뒤 재시도 ${item.retryCount}/${maxRetry}`);
     setTimeout(() => startDownload(item), RETRY_DELAY);
   } else {
     // 재시도 횟수 초과 → 실패 확정
@@ -388,6 +467,55 @@ chrome.downloads.onChanged.addListener((delta) => {
 });
 
 
+// === 멈춘 다운로드 감지 ===
+// 서버가 응답을 멈추면 브라우저 다운로드가 오류 없이 "진행 중"으로 남아,
+// 그 파일이 자리를 계속 차지하고 배치도 끝나지 않음. 받은 양이 STALL_TIMEOUT 동안 그대로면 취소하고 재시도.
+// onChanged 이벤트를 놓쳐 이미 끝난 다운로드가 "진행 중"으로 남은 경우도 여기서 정리됨
+async function checkStalledDownloads() {
+  if (downloadToItemMap.size === 0 && downloadQueue.length === 0) return;
+  debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent || '∞'}), 대기열 ${downloadQueue.length}개, 배치 ${batchMap.size}개`);
+
+  const now = Date.now();
+  for (const [downloadId, item] of Array.from(downloadToItemMap)) {
+    if (item.status !== 'in_progress' || item.stalled) continue;
+    let info;
+    try {
+      [info] = await browser.downloads.search({ id: downloadId });
+    } catch (error) {
+      continue;
+    }
+
+    if (!info) {
+      // 다운로드 목록에서 지워져 결과를 알 수 없음 → 오류로 보고 재시도
+      debugLog(`목록에서 사라짐 #${downloadId}: ${item.filename}`);
+      handleDownloadError(downloadId, 'REMOVED');
+    } else if (info.state === 'complete') {
+      debugLog(`완료 이벤트 누락 #${downloadId}: ${item.filename}`);
+      handleDownloadComplete(downloadId);
+    } else if (info.state === 'interrupted') {
+      debugLog(`중단 이벤트 누락 #${downloadId}: ${item.filename}`);
+      handleDownloadError(downloadId, info.error || 'INTERRUPTED');
+    } else if (info.paused) {
+      // 사용자가 일시정지한 다운로드는 멈춘 것으로 보지 않음
+      item.lastProgressAt = now;
+    } else if (info.bytesReceived !== item.lastBytes) {
+      item.lastBytes = info.bytesReceived;
+      item.lastProgressAt = now;
+    } else if (now - item.lastProgressAt > STALL_TIMEOUT) {
+      debugLog(`멈춤 감지 #${downloadId}: ${item.filename} (${Math.round((now - item.lastProgressAt) / 1000)}초 동안 ${info.bytesReceived} bytes에서 변화 없음) → 취소 후 재시도`);
+      item.stalled = true;
+      browser.downloads.cancel(downloadId).catch((error) => {
+        console.warn('Stalled download cancel failed:', error);
+        item.stalled = false;
+        handleDownloadError(downloadId, 'STALLED');
+      });
+    }
+  }
+}
+
+setInterval(checkStalledDownloads, STALL_CHECK_INTERVAL);
+
+
 // === 배치 완료 검사 ===
 function checkBatchCompletion(batchId) {
   const batch = batchMap.get(batchId);
@@ -395,7 +523,7 @@ function checkBatchCompletion(batchId) {
 
   const items = batch.items;
   const allDone = items.every(item =>
-    item.status === 'complete' || item.status === 'failed'
+    item.status === 'complete' || item.status === 'failed' || item.status === 'cancelled'
   );
 
   if (!allDone) return;
@@ -404,11 +532,14 @@ function checkBatchCompletion(batchId) {
   const total = items.length;
   const success = items.filter(i => i.status === 'complete').length;
   const failed = items.filter(i => i.status === 'failed').length;
+  const cancelled = items.filter(i => i.status === 'cancelled').length;
   const failedItems = items
     .filter(i => i.status === 'failed')
     .map(i => ({ url: i.url, filename: i.filename, error: i.error }));
+  debugLog(`배치 끝 ${batchId}: 전체 ${total}, 성공 ${success}, 실패 ${failed}, 취소 ${cancelled}`);
 
-  if (batch.postKey && total > 0) markPost(batch.postKey, success, failed);
+  // 전부 취소된 게시글은 기록하지 않음. 일부만 받았으면 "일부 실패"로 기록
+  if (batch.postKey && success + failed > 0) markPost(batch.postKey, success, failed + cancelled);
 
   // 콘텐츠 스크립트에 결과 전송 (토스트 알림 표시용)
   if (batch.tabId) {
@@ -418,14 +549,15 @@ function checkBatchCompletion(batchId) {
       total: total,
       success: success,
       failed: failed,
+      cancelled: cancelled,
       failedItems: failedItems,
       notificationText: batch.notificationText
     }).catch(() => {
       // 탭이 닫혀있을 경우 OS 알림으로 대체
-      showOSNotification(total, success, failed, batch.notificationText);
+      showOSNotification(total, success, failed + cancelled, batch.notificationText);
     });
   } else {
-    showOSNotification(total, success, failed, batch.notificationText);
+    showOSNotification(total, success, failed + cancelled, batch.notificationText);
   }
 
   // 배치 정리 (메모리 해제)

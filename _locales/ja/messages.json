@@ -197,6 +197,30 @@
   "update_notes_imp": {
     "message": "改善された機能"
   },
+  "update_notes_v132_exclude_title": {
+    "message": "作者の一括ダウンロードでキーワードによる投稿の除外"
+  },
+  "update_notes_v132_exclude_desc": {
+    "message": "作者ページでダウンロードを始めるときに、除外するキーワードをカンマ（,）区切りで入力できます。タイトルにキーワードを含む投稿（例：WIP）はダウンロードせず、入力したキーワードは次回も初期値として表示されます。"
+  },
+  "update_notes_v132_navigation_title": {
+    "message": "ダウンロード中のページ移動"
+  },
+  "update_notes_v132_navigation_desc": {
+    "message": "作者の一括ダウンロード中もサイト内の別のページに移動でき、進行状況の通知も表示され続けます。タブを閉じたり再読み込みしたりすると、まだ始まっていない投稿はダウンロードされません。"
+  },
+  "update_notes_v132_cancel_title": {
+    "message": "作者の一括ダウンロードでキャンセルがすぐに反映されない問題を修正"
+  },
+  "update_notes_v132_cancel_desc": {
+    "message": "キャンセルを押しても、すでに待機列に入ったファイルを最後までダウンロードしていた問題を修正しました。残りのファイルとダウンロード中のファイルもキャンセルされ、完了待ちの間もキャンセルできます。"
+  },
+  "update_notes_v132_stall_title": {
+    "message": "止まったダウンロードの自動再試行"
+  },
+  "update_notes_v132_stall_desc": {
+    "message": "サーバーの応答が途切れて 2 分間進まないダウンロードは、自動的にキャンセルしてやり直します。応答のない投稿情報の取得は 30 秒でスキップし、一括ダウンロードが止まらないようにしました。"
+  },
   "update_notes_v131_skip_title": {
     "message": "ダウンロード済みのファイルをスキップ"
   },
@@ -338,8 +362,20 @@
   "button_cancel": {
     "message": "キャンセル"
   },
-  "confirm_creator_download": {
-    "message": "このクリエイターの投稿$1件をすべてダウンロードしますか？"
+  "prompt_creator_exclude": {
+    "message": "この作者の投稿 $1 件をダウンロードします。\nタイトルに次のキーワードを含む投稿はダウンロードしません。複数ある場合はカンマ（,）で区切り、空欄ならすべてダウンロードします。（例：WIP, 途中経過）"
+  },
+  "notify_creator_navigation": {
+    "message": "ダウンロード中もサイト内の別のページに移動できます。タブを閉じたり再読み込みしたりすると、まだ始まっていない投稿はダウンロードされません。"
+  },
+  "confirm_creator_download_excluded": {
+    "message": "投稿 $1 件のうち $2 件を除外し、$3 件をダウンロードしますか？"
+  },
+  "notify_creator_all_excluded": {
+    "message": "除外キーワードにより、ダウンロードする投稿がありません"
+  },
+  "notify_creator_excluded": {
+    "message": "除外した投稿 $1 件"
   },
   "notify_creator_loading": {
     "message": "クリエイターの投稿一覧を読み込み中…"
@@ -352,6 +388,12 @@
   },
   "notify_creator_waiting": {
     "message": "ダウンロードの完了を待っています…"
+  },
+  "notify_creator_cancelling": {
+    "message": "キャンセル中… 残りのダウンロードを整理しています"
+  },
+  "notify_creator_cancelled_files": {
+    "message": "キャンセルしたファイル $1 件"
   },
   "notify_creator_complete_title": {
     "message": "クリエイターのダウンロード完了"

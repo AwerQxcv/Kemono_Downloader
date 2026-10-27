@@ -197,6 +197,30 @@
   "update_notes_imp": {
     "message": "개선된 기능"
   },
+  "update_notes_v132_exclude_title": {
+    "message": "작가 일괄 다운로드에서 키워드로 게시글 제외"
+  },
+  "update_notes_v132_exclude_desc": {
+    "message": "작가 페이지에서 다운로드를 시작하면 제외할 키워드를 쉼표(,)로 구분해 입력할 수 있습니다. 제목에 키워드가 들어간 게시글(예: WIP)은 받지 않으며, 입력한 키워드는 다음에도 기본값으로 채워집니다."
+  },
+  "update_notes_v132_navigation_title": {
+    "message": "다운로드 중 페이지 이동"
+  },
+  "update_notes_v132_navigation_desc": {
+    "message": "작가 일괄 다운로드 중에도 사이트 안에서 다른 페이지로 이동할 수 있고, 진행 상황 알림도 계속 표시됩니다. 탭을 닫거나 새로고침하면 아직 시작하지 않은 게시글은 받지 않습니다."
+  },
+  "update_notes_v132_cancel_title": {
+    "message": "작가 일괄 다운로드 취소가 바로 적용되지 않던 문제 수정"
+  },
+  "update_notes_v132_cancel_desc": {
+    "message": "취소를 눌러도 이미 대기열에 들어간 파일을 끝까지 받던 문제를 수정했습니다. 이제 남은 파일과 받는 중인 파일도 함께 취소되고, 완료 대기 중에도 취소할 수 있습니다."
+  },
+  "update_notes_v132_stall_title": {
+    "message": "멈춘 다운로드 자동 재시도"
+  },
+  "update_notes_v132_stall_desc": {
+    "message": "서버 응답이 끊겨 2분 동안 진행되지 않는 다운로드는 자동으로 취소하고 다시 받습니다. 응답하지 않는 게시글 정보 요청은 30초 뒤 건너뛰어, 일괄 다운로드 진행이 멈추지 않습니다."
+  },
   "update_notes_v131_skip_title": {
     "message": "이미 받은 파일 건너뛰기"
   },
@@ -338,8 +362,20 @@
   "button_cancel": {
     "message": "취소"
   },
-  "confirm_creator_download": {
-    "message": "이 작가의 게시글 $1개를 모두 다운로드할까요?"
+  "prompt_creator_exclude": {
+    "message": "이 작가의 게시글 $1개를 다운로드합니다.\n제목에 아래 키워드가 들어간 게시글은 받지 않습니다. 여러 개는 쉼표(,)로 구분하고, 비워 두면 모두 받습니다. (예: WIP, 진행중)"
+  },
+  "notify_creator_navigation": {
+    "message": "다운로드 중에도 사이트 안에서 다른 페이지로 이동할 수 있습니다. 탭을 닫거나 새로고침하면 아직 시작하지 않은 게시글은 받지 않습니다."
+  },
+  "confirm_creator_download_excluded": {
+    "message": "게시글 $1개 중 $2개를 제외하고 $3개를 다운로드할까요?"
+  },
+  "notify_creator_all_excluded": {
+    "message": "제외 키워드 때문에 받을 게시글이 없습니다"
+  },
+  "notify_creator_excluded": {
+    "message": "제외한 게시글 $1개"
   },
   "notify_creator_loading": {
     "message": "작가의 게시글 목록을 불러오는 중…"
@@ -352,6 +388,12 @@
   },
   "notify_creator_waiting": {
     "message": "다운로드가 끝나기를 기다리는 중…"
+  },
+  "notify_creator_cancelling": {
+    "message": "취소하는 중… 남은 다운로드를 정리하고 있습니다"
+  },
+  "notify_creator_cancelled_files": {
+    "message": "취소한 파일 $1개"
   },
   "notify_creator_complete_title": {
     "message": "작가 다운로드 완료"
