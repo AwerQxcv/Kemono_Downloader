@@ -209,6 +209,18 @@
   "update_notes_v132_navigation_desc": {
     "message": "作者の一括ダウンロード中もサイト内の別のページに移動でき、進行状況の通知も表示され続けます。タブを閉じたり再読み込みしたりすると、まだ始まっていない投稿はダウンロードされません。"
   },
+  "update_notes_v132_cancel_title": {
+    "message": "作者の一括ダウンロードでキャンセルがすぐに反映されない問題を修正"
+  },
+  "update_notes_v132_cancel_desc": {
+    "message": "キャンセルを押しても、すでに待機列に入ったファイルを最後までダウンロードしていた問題を修正しました。残りのファイルとダウンロード中のファイルもキャンセルされ、完了待ちの間もキャンセルできます。"
+  },
+  "update_notes_v132_stall_title": {
+    "message": "止まったダウンロードの自動再試行"
+  },
+  "update_notes_v132_stall_desc": {
+    "message": "サーバーの応答が途切れて 2 分間進まないダウンロードは、自動的にキャンセルしてやり直します。応答のない投稿情報の取得は 30 秒でスキップし、一括ダウンロードが止まらないようにしました。"
+  },
   "update_notes_v131_skip_title": {
     "message": "ダウンロード済みのファイルをスキップ"
   },
@@ -376,6 +388,12 @@
   },
   "notify_creator_waiting": {
     "message": "ダウンロードの完了を待っています…"
+  },
+  "notify_creator_cancelling": {
+    "message": "キャンセル中… 残りのダウンロードを整理しています"
+  },
+  "notify_creator_cancelled_files": {
+    "message": "キャンセルしたファイル $1 件"
   },
   "notify_creator_complete_title": {
     "message": "クリエイターのダウンロード完了"

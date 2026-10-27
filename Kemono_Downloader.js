@@ -26,23 +26,69 @@ const CREATOR_PAGE_SIZE = 50; // 작가 게시글 목록 API는 o(offset)를 50 
 const CREATOR_POST_INTERVAL = 1000; // 작가 일괄 다운로드 시 게시글 사이 대기 시간 (ms). 서버 429 방지용
 const RATE_LIMIT_RETRY = 5; // 429(요청 너무 많음)일 때 재시도 횟수
 const RATE_LIMIT_WAIT = 5000; // 429일 때 기본 대기 시간 (ms). 재시도할수록 늘어남
+const RATE_LIMIT_MAX_WAIT = 60000; // 429일 때 한 번에 기다리는 최대 시간 (Retry-After가 너무 길어도 이만큼만)
+const API_TIMEOUT = 30000; // API가 이 시간 안에 응답하지 않으면 실패 처리 (게시글 하나 때문에 일괄 다운로드가 멈추지 않도록)
+
+// 콘솔 디버그 로그 (문제 확인용). 끄려면 false
+const DEBUG_LOG = true;
+function debugLog(...args) {
+  if (DEBUG_LOG) console.log('[KD]', ...args);
+}
 
 class PostNotFoundError extends Error { }
+class CancelledError extends Error { }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// signal이 취소되면 기다리지 않고 CancelledError로 끝냄
+const sleep = (ms, signal) => new Promise((resolve, reject) => {
+  if (signal && signal.aborted) return reject(new CancelledError());
+  const timer = setTimeout(resolve, ms);
+  if (signal) {
+    signal.addEventListener('abort', () => {
+      clearTimeout(timer);
+      reject(new CancelledError());
+    }, { once: true });
+  }
+});
+
+// 응답 본문까지 API_TIMEOUT 안에 받지 못하면 실패. signal이 취소되면 바로 CancelledError
+async function fetchWithTimeout(url, options, signal) {
+  if (signal && signal.aborted) throw new CancelledError();
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, API_TIMEOUT);
+  const onAbort = () => controller.abort();
+  if (signal) signal.addEventListener('abort', onAbort, { once: true });
+  try {
+    const response = await fetch(url, Object.assign({}, options, { signal: controller.signal }));
+    const text = await response.text();
+    return { ok: response.ok, status: response.status, headers: response.headers, text: text };
+  } catch (error) {
+    if (signal && signal.aborted) throw new CancelledError();
+    if (timedOut) throw new Error(`API timeout (${API_TIMEOUT / 1000}s): ${url}`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener('abort', onAbort);
+  }
+}
 
 // kemono API는 Accept: text/css 가 아니면 403을 주는 경우가 있어 먼저 text/css로 시도하고, 실패하면 일반 Accept로 재시도
-async function apiGet(path) {
+async function apiGet(path, signal) {
   let response;
   for (let attempt = 0; ; attempt++) {
     for (const accept of ['text/css', '*/*']) {
-      response = await fetch(location.origin + '/api/v1' + path, { headers: { 'Accept': accept }, credentials: 'include' });
+      response = await fetchWithTimeout(location.origin + '/api/v1' + path, { headers: { 'Accept': accept }, credentials: 'include' }, signal);
       if (response.ok || response.status === 404 || response.status === 429) break;
     }
     if (response.status !== 429 || attempt >= RATE_LIMIT_RETRY) break;
     // 429면 Retry-After(초)만큼, 없으면 점점 길게 쉬었다가 다시 요청
     const retryAfter = parseInt(response.headers.get('Retry-After'));
-    await sleep(isNaN(retryAfter) ? RATE_LIMIT_WAIT * (attempt + 1) : retryAfter * 1000);
+    const wait = Math.min(isNaN(retryAfter) ? RATE_LIMIT_WAIT * (attempt + 1) : retryAfter * 1000, RATE_LIMIT_MAX_WAIT);
+    debugLog(`API 429 (요청 제한) ${path}: ${wait / 1000}초 뒤 다시 시도 (${attempt + 1}/${RATE_LIMIT_RETRY})`);
+    await sleep(wait, signal);
   }
   if (response.status === 404) throw new PostNotFoundError(path);
   if (!response.ok) {
@@ -50,7 +96,7 @@ async function apiGet(path) {
     error.status = response.status;
     throw error;
   }
-  return JSON.parse(await response.text()); // Content-Type이 text/css로 올 수 있어 response.json() 대신 직접 파싱
+  return JSON.parse(response.text); // Content-Type이 text/css로 올 수 있어 response.json() 대신 직접 파싱
 }
 
 // 현재 주소에서 서비스 / 유저 ID / 게시글 ID 추출. 작가 페이지면 pageID는 null
@@ -60,8 +106,8 @@ function parsePagePath() {
   return { service: match[1], userID: match[2], pageID: match[3] || null };
 }
 
-async function fetchPostData(service, userID, pageID) {
-  const data = await apiGet(`/${service}/user/${userID}/post/${pageID}`);
+async function fetchPostData(service, userID, pageID, signal) {
+  const data = await apiGet(`/${service}/user/${userID}/post/${pageID}`, signal);
   // 평평한 게시글 JSON과 { post, attachments, previews, videos } 형태 둘 다 지원
   const post = data && data.post ? data.post : data;
   if (!post || !post.id) throw new PostNotFoundError(pageID);
@@ -539,13 +585,14 @@ async function downloadPost(str) {
   } finally {
     // 배치 종료 알림 (모든 다운로드 요청 전송 완료). 도중에 오류가 나도 보내야 결과 알림이 뜸
     chrome.runtime.sendMessage({ type: "batch-end", batchId: batchId });
+    debugLog(`배치 ${batchId} 전송 완료: 파일 ${usedNames.size}개`);
   }
   return batchId;
 }
 
 // === 작가 페이지 일괄 다운로드 ===
 // 진행 중인 작가 일괄 다운로드 상태. 없으면 null
-// { total, excluded, sent, fetchFailed, cancelled, dispatchDone, pendingBatchIds, files, filesFailed, progress }
+// { total, excluded, sent, fetchFailed, cancelled, abort, dispatchDone, pendingBatchIds, files, filesFailed, filesCancelled, progress, waitLogTimer }
 let creatorRun = null;
 
 async function downloadCreator(str, page) {
@@ -585,37 +632,70 @@ async function downloadCreator(str, page) {
   // 제외한 게시글이 있으면 몇 개를 받는지 한 번 더 확인
   if (excluded > 0 && !confirm(chrome.i18n.getMessage('confirm_creator_download_excluded', [posts.length.toString(), excluded.toString(), ids.length.toString()]))) return;
 
-  creatorRun = {
+  const run = {
     total: ids.length,
     excluded: excluded,
     sent: 0,
     fetchFailed: 0,
     cancelled: false,
+    abort: new AbortController(), // 취소하면 진행 중인 API 요청과 대기를 바로 끝냄
     dispatchDone: false,
     pendingBatchIds: new Set(),
     files: 0,
     filesFailed: 0,
-    progress: showProgressToast('', () => { creatorRun.cancelled = true; }),
+    filesCancelled: 0,
+    progress: null,
+    waitLogTimer: null,
   };
-  const run = creatorRun;
+  run.progress = showProgressToast('', () => cancelCreatorRun(run));
+  creatorRun = run;
+  debugLog(`작가 일괄 다운로드 시작: 게시글 ${ids.length}개 (제외 ${excluded}개)`);
 
   for (const [i, pageID] of ids.entries()) {
     if (run.cancelled) break;
     run.progress.update(chrome.i18n.getMessage('notify_creator_progress', [(i + 1).toString(), run.total.toString()]));
+    debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} 정보 요청`);
     try {
-      globalThis.postData = await fetchPostData(page.service, page.userID, pageID);
+      globalThis.postData = await fetchPostData(page.service, page.userID, pageID, run.abort.signal);
+      debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} "${postData.title}": 이미지 ${postData.images.length}개, 첨부파일 ${postData.attachments.length}개`);
       await downloadPost(str);
       run.sent++;
     } catch (error) {
+      if (error instanceof CancelledError) break;
       console.error(`downloadCreator: post ${pageID} failed`, error);
+      debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} 실패: ${error.message || error}`);
       run.fetchFailed++;
     }
-    if (i < ids.length - 1) await sleep(CREATOR_POST_INTERVAL);
+    if (i < ids.length - 1) {
+      try {
+        await sleep(CREATOR_POST_INTERVAL, run.abort.signal);
+      } catch (error) {
+        break; // 취소됨
+      }
+    }
   }
 
   run.dispatchDone = true;
-  run.progress.update(chrome.i18n.getMessage('notify_creator_waiting'), false);
+  debugLog(`게시글 전송 끝 (보낸 게시글 ${run.sent}개, 불러오기 실패 ${run.fetchFailed}개${run.cancelled ? ', 취소됨' : ''}). 남은 배치 ${run.pendingBatchIds.size}개`);
+  if (!run.cancelled) {
+    // 남은 다운로드를 기다리는 동안에도 취소할 수 있음
+    run.progress.update(chrome.i18n.getMessage('notify_creator_waiting'));
+  }
+  // 오래 기다리면 어떤 배치가 남았는지 30초마다 콘솔에 표시
+  run.waitLogTimer = setInterval(() => {
+    debugLog(`다운로드 완료 대기 중. 남은 배치 ${run.pendingBatchIds.size}개:`, Array.from(run.pendingBatchIds));
+  }, 30000);
   finishCreatorRunIfDone();
+}
+
+// 취소: 게시글 전송을 멈추고, 백그라운드에 이미 보낸 게시글의 남은 파일(대기 중 / 진행 중)도 취소하도록 요청
+function cancelCreatorRun(run) {
+  if (run.cancelled) return;
+  run.cancelled = true;
+  run.abort.abort();
+  debugLog(`취소 요청: 배치 ${run.pendingBatchIds.size}개의 남은 파일 취소`);
+  chrome.runtime.sendMessage({ type: 'cancel-batches', batchIds: Array.from(run.pendingBatchIds) });
+  run.progress.update(chrome.i18n.getMessage('notify_creator_cancelling'), false);
 }
 
 // 모든 게시글 요청을 보냈고 모든 배치 결과가 돌아왔으면 요약 알림을 띄우고 종료
@@ -623,7 +703,9 @@ function finishCreatorRunIfDone() {
   const run = creatorRun;
   if (!run || !run.dispatchDone || run.pendingBatchIds.size > 0) return;
   creatorRun = null;
+  clearInterval(run.waitLogTimer);
   run.progress.remove();
+  debugLog(`작가 일괄 다운로드 끝: 게시글 ${run.sent}개, 파일 ${run.files}개 중 실패 ${run.filesFailed}개, 취소 ${run.filesCancelled}개`);
 
   const filesOk = run.files - run.filesFailed;
   const failed = run.filesFailed > 0 || run.fetchFailed > 0;
@@ -631,11 +713,14 @@ function finishCreatorRunIfDone() {
   if (run.excluded > 0) {
     lines.push(chrome.i18n.getMessage('notify_creator_excluded', [run.excluded.toString()]));
   }
+  if (run.filesCancelled > 0) {
+    lines.push(chrome.i18n.getMessage('notify_creator_cancelled_files', [run.filesCancelled.toString()]));
+  }
   if (run.fetchFailed > 0) {
     lines.push(chrome.i18n.getMessage('notify_creator_fetch_failed', [run.fetchFailed.toString()]));
   }
   showToast(
-    (failed ? '⚠️ ' : '✅ ') + chrome.i18n.getMessage(run.cancelled ? 'notify_creator_cancelled_title' : 'notify_creator_complete_title'),
+    (run.cancelled ? '⏹️ ' : failed ? '⚠️ ' : '✅ ') + chrome.i18n.getMessage(run.cancelled ? 'notify_creator_cancelled_title' : 'notify_creator_complete_title'),
     lines.join('\n'),
     '',
     failed || run.cancelled ? 'warning' : 'success'
@@ -871,10 +956,13 @@ function showProgressToast(text, onCancel) {
 
 function handleBatchResult(result) {
   // 작가 일괄 다운로드에 속한 배치면 결과만 모으고, 실패가 있을 때만 해당 게시글 알림을 띄움
+  const cancelled = result.cancelled || 0;
   if (creatorRun && creatorRun.pendingBatchIds.has(result.batchId)) {
     creatorRun.pendingBatchIds.delete(result.batchId);
-    creatorRun.files += result.total;
+    creatorRun.files += result.total - cancelled;
     creatorRun.filesFailed += result.failed;
+    creatorRun.filesCancelled += cancelled;
+    debugLog(`배치 결과 ${result.batchId}: 성공 ${result.success}, 실패 ${result.failed}, 취소 ${cancelled} (남은 배치 ${creatorRun.pendingBatchIds.size}개)`);
     if (result.failed > 0) showBatchResultToast(result);
     finishCreatorRunIfDone();
     return;

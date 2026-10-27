@@ -209,6 +209,18 @@
   "update_notes_v132_navigation_desc": {
     "message": "You can move to other pages on the site during a creator download, and the progress notice stays on screen. Closing or reloading the tab stops posts that have not started yet."
   },
+  "update_notes_v132_cancel_title": {
+    "message": "Fixed cancel not taking effect in creator downloads"
+  },
+  "update_notes_v132_cancel_desc": {
+    "message": "Pressing Cancel used to keep downloading every file already in the queue. Remaining and in-progress files are now cancelled too, and you can also cancel while waiting for downloads to finish."
+  },
+  "update_notes_v132_stall_title": {
+    "message": "Automatic retry for stalled downloads"
+  },
+  "update_notes_v132_stall_desc": {
+    "message": "A download that makes no progress for 2 minutes because the server stopped responding is cancelled and started again. Post info requests that get no response are skipped after 30 seconds, so creator downloads no longer freeze."
+  },
   "update_notes_v131_skip_title": {
     "message": "Skip files that were already downloaded"
   },
@@ -376,6 +388,12 @@
   },
   "notify_creator_waiting": {
     "message": "Waiting for downloads to finish…"
+  },
+  "notify_creator_cancelling": {
+    "message": "Cancelling… cleaning up the remaining downloads"
+  },
+  "notify_creator_cancelled_files": {
+    "message": "$1 files cancelled"
   },
   "notify_creator_complete_title": {
     "message": "Creator Download Complete"
