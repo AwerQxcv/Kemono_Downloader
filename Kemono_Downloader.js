@@ -27,6 +27,7 @@ const CREATOR_POST_INTERVAL = 1000; // 작가 일괄 다운로드 시 게시글 
 const RATE_LIMIT_RETRY = 5; // 429(요청 너무 많음)일 때 재시도 횟수
 const RATE_LIMIT_WAIT = 5000; // 429일 때 기본 대기 시간 (ms). 재시도할수록 늘어남
 const RATE_LIMIT_MAX_WAIT = 60000; // 429일 때 한 번에 기다리는 최대 시간 (Retry-After가 너무 길어도 이만큼만)
+const CREATOR_QUEUE_LIMIT = 10; // 백그라운드 대기열에 이만큼 쌓여 있으면 줄어들 때까지 다음 게시글을 미룸
 const API_TIMEOUT = 30000; // API가 이 시간 안에 응답하지 않으면 실패 처리 (게시글 하나 때문에 일괄 다운로드가 멈추지 않도록)
 
 // 콘솔 디버그 로그 (문제 확인용). 끄려면 false
@@ -641,6 +642,7 @@ async function downloadCreator(str, page) {
     abort: new AbortController(), // 취소하면 진행 중인 API 요청과 대기를 바로 끝냄
     dispatchDone: false,
     pendingBatchIds: new Set(),
+    skippedPosts: 0,
     files: 0,
     filesFailed: 0,
     filesCancelled: 0,
@@ -651,9 +653,29 @@ async function downloadCreator(str, page) {
   creatorRun = run;
   debugLog(`작가 일괄 다운로드 시작: 게시글 ${ids.length}개 (제외 ${excluded}개)`);
 
+  // "확장 기록" 건너뛰기 모드면 이미 모두 받은 게시글은 API 요청 없이 바로 건너뜀
+  // (브라우저 기록 모드는 지운 파일을 다시 받기 위한 것이라 파일마다 확인)
+  const skipData = await browser.storage.local.get(['selSkipDownloaded', 'downloadedPosts']);
+  const donePosts = skipData.selSkipDownloaded === 'record' ? (skipData.downloadedPosts || {}) : {};
+
   for (const [i, pageID] of ids.entries()) {
     if (run.cancelled) break;
     run.progress.update(chrome.i18n.getMessage('notify_creator_progress', [(i + 1).toString(), run.total.toString()]));
+
+    const record = donePosts[`${page.service}/${page.userID}/${pageID}`];
+    if (record && record.status === 'complete') {
+      run.skippedPosts++;
+      debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} 건너뜀 (이미 모두 받음)`);
+      continue;
+    }
+
+    // 백그라운드에 받을 파일이 많이 쌓여 있으면 줄어들 때까지 기다렸다가 다음 게시글로
+    try {
+      await waitForQueueRoom(run);
+    } catch (error) {
+      break; // 취소됨
+    }
+
     debugLog(`[${i + 1}/${run.total}] 게시글 ${pageID} 정보 요청`);
     try {
       globalThis.postData = await fetchPostData(page.service, page.userID, pageID, run.abort.signal);
@@ -688,6 +710,25 @@ async function downloadCreator(str, page) {
   finishCreatorRunIfDone();
 }
 
+// 백그라운드 대기열이 CREATOR_QUEUE_LIMIT보다 적어질 때까지 기다림. 취소되면 CancelledError
+async function waitForQueueRoom(run) {
+  let logged = false;
+  for (;;) {
+    let status;
+    try {
+      status = await browser.runtime.sendMessage({ type: 'queue-status' });
+    } catch (error) {
+      return; // 확인할 수 없으면 기다리지 않음
+    }
+    if (!status || status.queued < CREATOR_QUEUE_LIMIT) return;
+    if (!logged) {
+      debugLog(`다운로드 대기열 ${status.queued}개 (진행 ${status.active}개) → 줄어들 때까지 다음 게시글을 기다림`);
+      logged = true;
+    }
+    await sleep(1000, run.abort.signal);
+  }
+}
+
 // 취소: 게시글 전송을 멈추고, 백그라운드에 이미 보낸 게시글의 남은 파일(대기 중 / 진행 중)도 취소하도록 요청
 function cancelCreatorRun(run) {
   if (run.cancelled) return;
@@ -705,13 +746,16 @@ function finishCreatorRunIfDone() {
   creatorRun = null;
   clearInterval(run.waitLogTimer);
   run.progress.remove();
-  debugLog(`작가 일괄 다운로드 끝: 게시글 ${run.sent}개, 파일 ${run.files}개 중 실패 ${run.filesFailed}개, 취소 ${run.filesCancelled}개`);
+  debugLog(`작가 일괄 다운로드 끝: 건너뛴 게시글 ${run.skippedPosts}개, 게시글 ${run.sent}개, 파일 ${run.files}개 중 실패 ${run.filesFailed}개, 취소 ${run.filesCancelled}개`);
 
   const filesOk = run.files - run.filesFailed;
   const failed = run.filesFailed > 0 || run.fetchFailed > 0;
   const lines = [chrome.i18n.getMessage('notify_creator_stats', [run.sent.toString(), filesOk.toString(), run.files.toString()])];
   if (run.excluded > 0) {
     lines.push(chrome.i18n.getMessage('notify_creator_excluded', [run.excluded.toString()]));
+  }
+  if (run.skippedPosts > 0) {
+    lines.push(chrome.i18n.getMessage('notify_creator_skipped_posts', [run.skippedPosts.toString()]));
   }
   if (run.filesCancelled > 0) {
     lines.push(chrome.i18n.getMessage('notify_creator_cancelled_files', [run.filesCancelled.toString()]));

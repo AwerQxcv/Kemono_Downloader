@@ -221,6 +221,12 @@
   "update_notes_v132_stall_desc": {
     "message": "サーバーの応答が途切れて 2 分間進まないダウンロードは、自動的にキャンセルしてやり直します。応答のない投稿情報の取得は 30 秒でスキップし、一括ダウンロードが止まらないようにしました。"
   },
+  "update_notes_v132_pace_title": {
+    "message": "同時ダウンロードは最大 5 件、ダウンロード済み投稿を素早くスキップ"
+  },
+  "update_notes_v132_pace_desc": {
+    "message": "サーバーが接続を切らないよう、最大同時ダウンロード数を 1〜5 に制限しました（以前の 0 は 5 になります）。作者の一括ダウンロードは、待機中のファイルが多いと減るまで次の投稿を待ち、「拡張機能の記録」モードではすべてダウンロード済みの投稿を情報を読み込まずにすぐスキップします。"
+  },
   "update_notes_v131_skip_title": {
     "message": "ダウンロード済みのファイルをスキップ"
   },
@@ -312,7 +318,7 @@
     "message": "ダウンロード失敗時に自動的にリトライする最大回数を指定します。<br/><b>0</b>に設定すると自動リトライが無効になります。"
   },
   "options_max_concurrent": {
-    "message": "最大同時ダウンロード数 (0 = 無制限)"
+    "message": "最大同時ダウンロード数（1〜5）"
   },
   "options_download_delay": {
     "message": "ダウンロード間の待機時間 (ms)"
@@ -394,6 +400,9 @@
   },
   "notify_creator_cancelled_files": {
     "message": "キャンセルしたファイル $1 件"
+  },
+  "notify_creator_skipped_posts": {
+    "message": "ダウンロード済みの投稿 $1 件をスキップ"
   },
   "notify_creator_complete_title": {
     "message": "クリエイターのダウンロード完了"

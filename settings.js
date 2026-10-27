@@ -12,6 +12,14 @@ const PATH_CONFIG = {
   txtNotificationFormat: '$PlatformName$ $UserName$ - $Title$'
 }
 
+// 최대 동시 다운로드 수는 1~5. 예전 설정의 0(제한 없음)이나 5보다 큰 값은 5로
+const MAX_CONCURRENT_LIMIT = 5;
+function clampMaxConcurrent(value) {
+  const n = parseInt(value);
+  if (isNaN(n) || n < 0) return PATH_CONFIG.numMaxConcurrent;
+  return n === 0 ? MAX_CONCURRENT_LIMIT : Math.min(n, MAX_CONCURRENT_LIMIT);
+}
+
 // Settings for searching for incorrect macros.
 // The list of allowed macros is stored as a regexp.
 // Standard: These are macros allowed in all input fields.
@@ -136,8 +144,7 @@ function save_settings() {
   if (isNaN(numRetryCount) || numRetryCount < 0) numRetryCount = PATH_CONFIG.numRetryCount;
   var numDownloadDelay = parseInt(document.getElementById("numDownloadDelay").value);
   if (isNaN(numDownloadDelay) || numDownloadDelay < 0) numDownloadDelay = PATH_CONFIG.numDownloadDelay;
-  var numMaxConcurrent = parseInt(document.getElementById("numMaxConcurrent").value);
-  if (isNaN(numMaxConcurrent) || numMaxConcurrent < 0) numMaxConcurrent = PATH_CONFIG.numMaxConcurrent;
+  var numMaxConcurrent = clampMaxConcurrent(document.getElementById("numMaxConcurrent").value);
   var selConflictAction = document.getElementById("selConflictAction").value;
   var selSkipDownloaded = document.getElementById("selSkipDownloaded").value;
   var txtNotificationFormat = document.getElementById("txtNotificationFormat").value;
@@ -179,7 +186,7 @@ function load_settings() {
       document.getElementById("txtAttachmentsPath").value = load.txtAttachmentsPath;
       document.getElementById("numRetryCount").value = load.numRetryCount ?? PATH_CONFIG.numRetryCount;
       document.getElementById("numDownloadDelay").value = load.numDownloadDelay ?? PATH_CONFIG.numDownloadDelay;
-      document.getElementById("numMaxConcurrent").value = load.numMaxConcurrent ?? PATH_CONFIG.numMaxConcurrent;
+      document.getElementById("numMaxConcurrent").value = clampMaxConcurrent(load.numMaxConcurrent ?? PATH_CONFIG.numMaxConcurrent);
       document.getElementById("selConflictAction").value = load.selConflictAction ?? PATH_CONFIG.selConflictAction;
       document.getElementById("selSkipDownloaded").value = load.selSkipDownloaded ?? PATH_CONFIG.selSkipDownloaded;
       document.getElementById("txtNotificationFormat").value = load.txtNotificationFormat ?? PATH_CONFIG.txtNotificationFormat;

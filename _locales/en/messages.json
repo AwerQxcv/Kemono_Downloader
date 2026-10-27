@@ -221,6 +221,12 @@
   "update_notes_v132_stall_desc": {
     "message": "A download that makes no progress for 2 minutes because the server stopped responding is cancelled and started again. Post info requests that get no response are skipped after 30 seconds, so creator downloads no longer freeze."
   },
+  "update_notes_v132_pace_title": {
+    "message": "Up to 5 simultaneous downloads, faster skipping of downloaded posts"
+  },
+  "update_notes_v132_pace_desc": {
+    "message": "Simultaneous downloads are now limited to 1–5 so the server does not drop connections (the old 0 becomes 5). Creator downloads wait for the download queue to shrink before moving on to the next post, and in 'extension record' mode posts that were fully downloaded are skipped right away without loading their info."
+  },
   "update_notes_v131_skip_title": {
     "message": "Skip files that were already downloaded"
   },
@@ -312,7 +318,7 @@
     "message": "Specifies the maximum number of times a failed download will be retried.<br/>Set to <b>0</b> to disable automatic retries."
   },
   "options_max_concurrent": {
-    "message": "Maximum simultaneous downloads (0 = unlimited)"
+    "message": "Maximum simultaneous downloads (1–5)"
   },
   "options_download_delay": {
     "message": "Delay between downloads (ms)"
@@ -394,6 +400,9 @@
   },
   "notify_creator_cancelled_files": {
     "message": "$1 files cancelled"
+  },
+  "notify_creator_skipped_posts": {
+    "message": "$1 already downloaded posts skipped"
   },
   "notify_creator_complete_title": {
     "message": "Creator Download Complete"
