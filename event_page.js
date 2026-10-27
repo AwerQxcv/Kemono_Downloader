@@ -177,20 +177,36 @@ function pumpQueue() {
 
 async function startDownload(item) {
   item.status = 'starting';
+  let downloadId;
   try {
-    const downloadId = await browser.downloads.download({
+    downloadId = await browser.downloads.download({
       url: item.url,
       filename: item.filename,
       saveAs: false,
       conflictAction: conflictAction,
     });
-    item.downloadId = downloadId;
-    item.status = 'in_progress';
-    downloadToItemMap.set(downloadId, item);
   } catch (error) {
     console.error('Download start failed:', error);
     // 다운로드 시작 자체가 실패한 경우에도 배치에 기록
     finishItem(item, 'failed', item.retryCount > 0 ? item.error : 'DOWNLOAD_START_FAILED');
+    return;
+  }
+
+  item.downloadId = downloadId;
+  item.status = 'in_progress';
+  downloadToItemMap.set(downloadId, item);
+
+  // 서버가 바로 오류를 주면 onChanged가 위 매핑 등록보다 먼저 와서 무시될 수 있음.
+  // 그러면 항목이 영원히 "진행 중"으로 남아 배치가 끝나지 않으므로, 등록 직후 현재 상태를 한 번 확인
+  try {
+    const [info] = await browser.downloads.search({ id: downloadId });
+    if (info && info.state === 'complete') {
+      handleDownloadComplete(downloadId);
+    } else if (info && info.state === 'interrupted') {
+      handleDownloadError(downloadId, info.error || 'INTERRUPTED');
+    }
+  } catch (error) {
+    console.warn('Download state check failed:', error);
   }
 }
 
@@ -207,45 +223,51 @@ function finishItem(item, status, error = null) {
   pumpQueue();
 }
 
+// ✅ 성공 완료. onChanged와 startDownload의 상태 확인 양쪽에서 불릴 수 있으므로,
+// 매핑이 이미 지워졌으면(먼저 처리됨) 아무것도 하지 않음
+function handleDownloadComplete(downloadId) {
+  const item = downloadToItemMap.get(downloadId);
+  if (!item) return;
+  finishItem(item, 'complete');
+}
 
-// === 다운로드 상태 모니터링 ===
-chrome.downloads.onChanged.addListener((delta) => {
-  const item = downloadToItemMap.get(delta.id);
-
-  // 이 확장이 시작한 다운로드가 아니면 무시
+// ❌ 에러 또는 중단 발생
+function handleDownloadError(downloadId, errorReason) {
+  const item = downloadToItemMap.get(downloadId);
   if (!item) return;
 
-  // ✅ 성공 완료
-  if (delta.state?.current === 'complete') {
-    finishItem(item, 'complete');
+  // 사용자가 의도적으로 취소한 경우 → 재시도하지 않음
+  if (errorReason === 'USER_CANCELED') {
+    finishItem(item, 'failed', 'USER_CANCELED');
     return;
   }
 
-  // ❌ 에러 또는 중단 발생
-  if (delta.error?.current) {
-    const errorReason = delta.error.current;
+  // 그 외 에러 → 재시도 (자리는 그대로 차지한 채 기다림)
+  if (item.retryCount < maxRetry) {
+    item.retryCount++;
+    item.status = 'retrying';
+    item.error = errorReason;
 
-    // 사용자가 의도적으로 취소한 경우 → 재시도하지 않음
-    if (errorReason === 'USER_CANCELED') {
-      finishItem(item, 'failed', 'USER_CANCELED');
-      return;
-    }
+    // 기존 매핑 제거 (새 downloadId로 교체 예정)
+    downloadToItemMap.delete(downloadId);
+    item.downloadId = null;
 
-    // 그 외 에러 → 재시도 (자리는 그대로 차지한 채 기다림)
-    if (item.retryCount < maxRetry) {
-      item.retryCount++;
-      item.status = 'retrying';
-      item.error = errorReason;
+    setTimeout(() => startDownload(item), RETRY_DELAY);
+  } else {
+    // 재시도 횟수 초과 → 실패 확정
+    finishItem(item, 'failed', errorReason);
+  }
+}
 
-      // 기존 매핑 제거 (새 downloadId로 교체 예정)
-      downloadToItemMap.delete(delta.id);
-      item.downloadId = null;
 
-      setTimeout(() => startDownload(item), RETRY_DELAY);
-    } else {
-      // 재시도 횟수 초과 → 실패 확정
-      finishItem(item, 'failed', errorReason);
-    }
+// === 다운로드 상태 모니터링 ===
+chrome.downloads.onChanged.addListener((delta) => {
+  // 이 확장이 시작한 다운로드가 아니면 handle 함수들이 무시함
+  if (delta.state?.current === 'complete') {
+    handleDownloadComplete(delta.id);
+  } else if (delta.error?.current || delta.state?.current === 'interrupted') {
+    // 중단 상태인데 오류 사유가 같이 오지 않는 경우도 실패로 처리
+    handleDownloadError(delta.id, delta.error?.current || 'INTERRUPTED');
   }
 });
 
