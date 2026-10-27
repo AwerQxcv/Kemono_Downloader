@@ -45,7 +45,11 @@ async function apiGet(path) {
     await sleep(isNaN(retryAfter) ? RATE_LIMIT_WAIT * (attempt + 1) : retryAfter * 1000);
   }
   if (response.status === 404) throw new PostNotFoundError(path);
-  if (!response.ok) throw new Error(`API ${path} : HTTP ${response.status}`);
+  if (!response.ok) {
+    const error = new Error(`API ${path} : HTTP ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
   return JSON.parse(await response.text()); // Content-Type이 text/css로 올 수 있어 response.json() 대신 직접 파싱
 }
 
@@ -115,7 +119,9 @@ async function fetchCreatorPostIDs(service, userID) {
         const data = await apiGet(`${path}?o=${offset}`);
         posts = Array.isArray(data) ? data : (data && Array.isArray(data.posts) ? data.posts : null);
       } catch (error) {
-        if (listPath) throw error; // 이미 되던 경로가 도중에 실패하면 중단
+        // 마지막 페이지 다음을 요청하면 빈 목록 대신 404/400을 주는 사이트가 있음 → 목록 끝으로 처리
+        if (listPath && (error instanceof PostNotFoundError || error.status === 400)) return ids;
+        if (listPath) throw error; // 이미 되던 경로가 도중에 다른 이유로 실패하면 중단
         console.warn(`fetchCreatorPostIDs: ${path} failed`, error);
       }
       if (posts) {
@@ -132,8 +138,8 @@ async function fetchCreatorPostIDs(service, userID) {
       ids.push(String(post.id));
       added++;
     }
-    // 빈 페이지거나, 새 게시글이 하나도 없으면(같은 페이지 반복 방지) 끝
-    if (posts.length === 0 || added === 0) break;
+    // 한 페이지(50개)보다 적게 왔으면 마지막 페이지. 새 게시글이 하나도 없어도(같은 페이지 반복 방지) 끝
+    if (posts.length < CREATOR_PAGE_SIZE || added === 0) break;
   }
   return ids;
 }
