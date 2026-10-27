@@ -197,6 +197,36 @@
   "update_notes_imp": {
     "message": "개선된 기능"
   },
+  "update_notes_v131_skip_title": {
+    "message": "이미 받은 파일 건너뛰기"
+  },
+  "update_notes_v131_skip_desc": {
+    "message": "설정에서 확장 프로그램의 기록 또는 브라우저 다운로드 기록을 기준으로 이미 받은 파일을 건너뛸 수 있습니다. 중간에 멈춘 일괄 다운로드를 처음부터 다시 받지 않아도 됩니다."
+  },
+  "update_notes_v131_status_title": {
+    "message": "게시글 다운로드 상태 표시"
+  },
+  "update_notes_v131_status_desc": {
+    "message": "작가 페이지의 카드 오른쪽 아래와 게시글 제목 옆에 다운로드 완료(✓), 일부 실패(⚠), 실패(✕) 여부를 표시합니다."
+  },
+  "update_notes_v131_history_title": {
+    "message": "다운로드 기록 내보내기 / 가져오기"
+  },
+  "update_notes_v131_history_desc": {
+    "message": "설정에서 받은 파일과 게시글 기록을 JSON 파일로 내보내거나 가져와 다른 브라우저에서도 이어서 사용할 수 있습니다."
+  },
+  "update_notes_v131_stuck_title": {
+    "message": "작가 일괄 다운로드가 완료 대기에서 멈추던 문제 수정"
+  },
+  "update_notes_v131_stuck_desc": {
+    "message": "재시도 끝에 실패한 파일이 있으면 \"다운로드가 끝나기를 기다리는 중…\" 표시가 사라지지 않던 문제를 수정했습니다."
+  },
+  "update_notes_v131_paging_title": {
+    "message": "일부 작가 페이지에서 일괄 다운로드가 되지 않던 문제 수정"
+  },
+  "update_notes_v131_paging_desc": {
+    "message": "게시글 목록의 마지막 페이지 다음을 요청할 때 오류가 나 다운로드가 시작되지 않던 문제를 수정했습니다."
+  },
   "update_notes_v130_creator_title": {
     "message": "작가 페이지에서 전체 게시글 일괄 다운로드"
   },

@@ -197,6 +197,36 @@
   "update_notes_imp": {
     "message": "改善された機能"
   },
+  "update_notes_v131_skip_title": {
+    "message": "ダウンロード済みのファイルをスキップ"
+  },
+  "update_notes_v131_skip_desc": {
+    "message": "設定で、拡張機能の記録またはブラウザのダウンロード履歴をもとに、ダウンロード済みのファイルをスキップできます。途中で止まった一括ダウンロードを最初からやり直す必要がなくなります。"
+  },
+  "update_notes_v131_status_title": {
+    "message": "投稿のダウンロード状態を表示"
+  },
+  "update_notes_v131_status_desc": {
+    "message": "作者ページのカード右下と投稿タイトルの横に、ダウンロード完了（✓）、一部失敗（⚠）、失敗（✕）を表示します。"
+  },
+  "update_notes_v131_history_title": {
+    "message": "ダウンロード記録のエクスポート / インポート"
+  },
+  "update_notes_v131_history_desc": {
+    "message": "設定から、ダウンロードしたファイルと投稿の記録を JSON ファイルとしてエクスポート・インポートでき、別のブラウザでも引き続き使えます。"
+  },
+  "update_notes_v131_stuck_title": {
+    "message": "作者の一括ダウンロードが完了待ちで止まる問題を修正"
+  },
+  "update_notes_v131_stuck_desc": {
+    "message": "再試行しても失敗したファイルがあると、「ダウンロードの完了を待っています…」の表示が消えなかった問題を修正しました。"
+  },
+  "update_notes_v131_paging_title": {
+    "message": "一部の作者ページで一括ダウンロードできない問題を修正"
+  },
+  "update_notes_v131_paging_desc": {
+    "message": "投稿一覧の最終ページの次を要求したときにエラーが起き、ダウンロードが始まらなかった問題を修正しました。"
+  },
   "update_notes_v130_creator_title": {
     "message": "クリエイターページから全投稿を一括ダウンロード"
   },
