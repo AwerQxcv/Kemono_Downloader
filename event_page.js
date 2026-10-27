@@ -125,6 +125,14 @@ const downloadQueue = [];
 // 응답 없는 서버의 파일을 계속 다시 시도하느라 나머지 다운로드가 멈추지 않음 (새 파일이 없으면 모든 자리를 씀)
 const retryQueue = [];
 const RETRY_SLOTS = 1;
+// 이미 받았는지 확인하는 중이라 아직 대기열에 들어가지 않은 항목 수 (브라우저 기록 모드에서는 확인이 오래 걸릴 수 있음)
+let pendingChecks = 0;
+// 짧은 시간에 실패가 몰리면 서버가 요청을 감당하지 못하는 것으로 보고 잠시 새 다운로드를 시작하지 않음
+const BURST_WINDOW = 10000; // 이 시간 안에
+const BURST_FAILURES = 3; // 이만큼 실패하면
+const BURST_PAUSE = 15000; // 이만큼 쉼
+const recentFailures = [];
+let pausedUntil = 0;
 let activeDownloads = 0; // 자리를 차지하고 있는 항목 수 (시작 중, 진행 중). 재시도 대기 중인 항목은 자리를 비움
 let activeRetries = 0; // 그중 재시도 중인 항목 수
 // 브라우저에 다운로드를 요청하고 아직 downloadId를 받지 못한 항목 (downloadToItemMap에 없으므로 따로 감시)
@@ -206,7 +214,15 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   } else if (request.type === "queue-status") {
     // 작가 일괄 다운로드가 대기열이 줄 때까지 다음 게시글을 미루는 데 사용
     // 재시도 줄은 세지 않음 (재시도할 파일이 쌓여도 다음 게시글은 계속 받음)
-    sendResponse({ queued: downloadQueue.length, active: activeDownloads, retrying: retryQueue.length });
+    // 확인 중인 항목도 곧 대기열에 들어가므로 같이 셈 (세지 않으면 다음 게시글을 너무 많이 보냄)
+    sendResponse({
+      queued: downloadQueue.length + pendingChecks,
+      active: activeDownloads,
+      max: maxConcurrent,
+      activeRetries: activeRetries,
+      retrying: retryQueue.length,
+      paused: Math.max(0, pausedUntil - Date.now()),
+    });
 
   } else if (request.type === "batch-status") {
     // 진행 상황 표시용: 게시글 하나 다운로드의 완료 수, 작가 일괄 다운로드 완료 대기 중의 남은 파일과 상태
@@ -369,7 +385,13 @@ async function downloadAndTrack(url, filename, batchId, isText = false) {
 
   // 이미 받은 파일이면 다운로드하지 않고 성공으로 처리
   // (확인하는 동안에도 항목은 'queued' 상태로 배치에 있으므로 배치가 먼저 끝나지 않음)
-  const alreadyDownloaded = await isAlreadyDownloaded(filename);
+  pendingChecks++;
+  let alreadyDownloaded;
+  try {
+    alreadyDownloaded = await isAlreadyDownloaded(filename);
+  } finally {
+    pendingChecks--;
+  }
   if (item.cancelled) return; // 확인하는 동안 취소됨 (cancelItem에서 이미 처리)
   if (alreadyDownloaded) {
     debugLog(`건너뜀 (이미 받음): ${filename}`);
@@ -429,6 +451,7 @@ function requeueItem(item) {
 
 // 자리가 남아 있는 만큼 파일을 시작. 재시도 파일은 새 파일이 기다리는 동안 RETRY_SLOTS개 자리까지만 씀
 function pumpQueue() {
+  if (Date.now() < pausedUntil) return; // 실패가 몰려 잠시 쉬는 중 (끝나면 타이머와 감시에서 다시 부름)
   while (activeDownloads < maxConcurrent) {
     const retryAllowed = retryQueue.length > 0 && (activeRetries < RETRY_SLOTS || downloadQueue.length === 0);
     let item;
@@ -441,6 +464,18 @@ function pumpQueue() {
     if (item.retrySlot) activeRetries++;
     startDownload(item);
   }
+}
+
+// 실패를 기록하고, BURST_WINDOW 안에 BURST_FAILURES개 이상이면 BURST_PAUSE 동안 새 다운로드를 시작하지 않음
+function noteFailure() {
+  const now = Date.now();
+  recentFailures.push(now);
+  while (recentFailures.length > 0 && now - recentFailures[0] > BURST_WINDOW) recentFailures.shift();
+  if (recentFailures.length < BURST_FAILURES || now < pausedUntil) return;
+  pausedUntil = now + BURST_PAUSE;
+  recentFailures.length = 0;
+  debugLog(`${BURST_WINDOW / 1000}초 안에 실패 ${BURST_FAILURES}개 이상 → 서버가 요청을 감당하지 못하는 것으로 보고 ${BURST_PAUSE / 1000}초 동안 새 다운로드를 시작하지 않음`);
+  setTimeout(pumpQueue, BURST_PAUSE);
 }
 
 // 항목이 차지하던 자리를 비움
@@ -564,6 +599,7 @@ function handleDownloadError(downloadId, errorReason) {
 // 자리를 비워 다음 파일을 먼저 받고, 잠시 뒤 대기열 맨 뒤로 다시 넣어 재시도. 횟수나 시간을 넘으면 실패로 확정
 function retryOrFail(item, errorReason) {
   const downloadId = item.downloadId;
+  noteFailure();
   if (item.attemptStartedAt) item.tryTime += Date.now() - item.attemptStartedAt;
   const outOfTime = item.tryTime >= RETRY_WINDOW;
   if (item.retryCount < maxRetry && !outOfTime) {
@@ -611,8 +647,10 @@ async function checkStalledDownloads() {
   const now = Date.now();
   if (now - lastStatusLogAt >= STATUS_LOG_INTERVAL) {
     lastStatusLogAt = now;
-    debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent}, 그중 재시도 ${activeRetries}개), 대기열 ${downloadQueue.length}개, 재시도 줄 ${retryQueue.length}개, 배치 ${batchMap.size}개`);
+    debugLog(`상태: 진행 ${activeDownloads}개 (최대 ${maxConcurrent}, 그중 재시도 ${activeRetries}개), 대기열 ${downloadQueue.length}개, 확인 중 ${pendingChecks}개, 재시도 줄 ${retryQueue.length}개, 배치 ${batchMap.size}개${now < pausedUntil ? `, ${Math.ceil((pausedUntil - now) / 1000)}초 쉬는 중` : ''}`);
   }
+  // 빈자리가 있는데 대기열이 남아 있으면 다시 채움 (쉬는 시간이 끝났거나, 놓친 경우를 위한 안전장치)
+  pumpQueue();
 
   // 브라우저가 다운로드를 시작해 주지 않는 항목 → 이번 시도를 포기 (늦게 시작되면 startDownload에서 취소)
   for (const item of Array.from(startingItems)) {

@@ -695,10 +695,23 @@ async function downloadCreator(str, page) {
     progress: null,
     waitLogTimer: null,
     cancelTimer: null,
+    statusTimer: null, // 15초마다 백그라운드 상태를 콘솔에 표시
+    failedPosts: [], // 파일이 하나라도 실패한 게시글 주소 (끝날 때 콘솔에 표시)
   };
   run.progress = showProgressToast('', () => cancelCreatorRun(run));
   creatorRun = run;
   debugLog(`작가 일괄 다운로드 시작: 게시글 ${ids.length}개 (제외 ${excluded}개)`);
+  run.postUrl = (pageID) => `${location.origin}/${page.service}/user/${page.userID}/post/${pageID}`;
+  run.statusTimer = setInterval(async () => {
+    let status;
+    try {
+      status = await browser.runtime.sendMessage({ type: 'queue-status' });
+    } catch (error) {
+      return;
+    }
+    if (!status || creatorRun !== run) return;
+    debugLog(`백그라운드: 진행 ${status.active}/${status.max} (그중 재시도 ${status.activeRetries}), 대기열 ${status.queued}, 재시도 줄 ${status.retrying}${status.paused > 0 ? `, 실패가 몰려 ${Math.ceil(status.paused / 1000)}초 쉬는 중` : ''}, 남은 게시글 배치 ${run.pendingBatchIds.size}`);
+  }, 15000);
 
   // "확장 기록" 건너뛰기 모드면 이미 모두 받은 게시글은 API 요청 없이 바로 건너뜀
   // (브라우저 기록 모드는 지운 파일을 다시 받기 위한 것이라 파일마다 확인)
@@ -850,6 +863,8 @@ function finishCreatorRunIfDone() {
   creatorRun = null;
   clearInterval(run.waitLogTimer);
   clearInterval(run.cancelTimer);
+  clearInterval(run.statusTimer);
+  if (run.failedPosts.length > 0) debugLog(`파일이 실패한 게시글 ${run.failedPosts.length}개:\n  ` + run.failedPosts.join('\n  '));
   run.progress.remove();
   debugLog(`작가 일괄 다운로드 끝: 건너뛴 게시글 ${run.skippedPosts}개, 게시글 ${run.sent}개, 파일 ${run.files}개 중 실패 ${run.filesFailed}개, 취소 ${run.filesCancelled}개`);
 
@@ -1163,6 +1178,12 @@ function handleBatchResult(result) {
     creatorRun.filesFailed += result.failed;
     creatorRun.filesCancelled += cancelled;
     debugLog(`배치 결과 ${result.batchId}: 성공 ${result.success}, 실패 ${result.failed}, 취소 ${cancelled} (남은 배치 ${creatorRun.pendingBatchIds.size}개)`);
+    if (result.failed > 0) {
+      // batchId는 "유저ID_게시글ID_시간"
+      const postUrl = creatorRun.postUrl(result.batchId.split('_').slice(-2)[0]);
+      creatorRun.failedPosts.push(postUrl);
+      debugLog(`실패한 파일 (${postUrl}):` + (result.failedItems || []).map((item) => `\n  ${item.filename} (${item.error})`).join(''));
+    }
     if (result.failed > 0) showBatchResultToast(result, false); // 서버 문제 안내는 마지막 요약에 한 번만
     finishCreatorRunIfDone();
     return;
