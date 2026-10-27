@@ -153,12 +153,20 @@ function classifyFiles(post) {
   for (const file of files) {
     const name = decodeHtmlEntities(file.name || '');
     const entry = {
-      url: location.origin + '/data' + file.path,
+      url: getFileServer(file) + '/data' + file.path,
       name: name,
     };
     (IMAGE_EXTENSIONS.has(getExtension(name || file.path)) ? images : attachments).push(entry);
   }
   return { images, attachments };
+}
+
+// 파일이 저장된 서버 주소. API 응답의 server(전체 주소)나 node(서버 번호, 2면 n2.도메인)를 사용
+// 둘 다 없으면 pawchive는 file.도메인, kemono는 사이트 주소(/data가 파일 서버로 넘겨줌)
+function getFileServer(file) {
+  if (file.server) return file.server.replace(/\/+$/, '');
+  if (file.node) return `https://n${file.node}.${location.hostname}`;
+  return location.hostname.startsWith('pawchive.') ? `https://file.${location.hostname}` : location.origin;
 }
 
 function getExtension(fileName) {
