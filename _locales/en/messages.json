@@ -334,5 +334,29 @@
   },
   "notify_creator_fetch_failed": {
     "message": "$1 posts could not be loaded"
+  },
+  "options_skip_downloaded": {
+    "message": "Skip files that were already downloaded"
+  },
+  "options_skip_off": {
+    "message": "Off (download every file again)"
+  },
+  "options_skip_record": {
+    "message": "Use the extension's own record"
+  },
+  "options_skip_history": {
+    "message": "Use the browser download history"
+  },
+  "help_skip_downloaded": {
+    "message": "Skips files that were already downloaded when downloading again.<ul><li><b>Extension record</b>: the extension remembers each file it saved successfully (failed files are removed from the record). Works even if you clear the browser's download list, but files you deleted yourself are still skipped; clear the record below if needed.</li><li><b>Browser download history</b>: checks the browser's download list for a finished download with the same file name whose file still exists on disk. Deleted files are downloaded again, but clearing the browser's download list makes everything download again.</li></ul>"
+  },
+  "options_clear_download_history": {
+    "message": "Clear downloaded file history"
+  },
+  "confirm_clear_download_history": {
+    "message": "Clear the history of downloaded files? Every file will be downloaded again next time."
+  },
+  "notify_download_history_cleared": {
+    "message": "Downloaded file history cleared."
   }
 }

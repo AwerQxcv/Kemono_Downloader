@@ -8,6 +8,7 @@ const PATH_CONFIG = {
   numDownloadDelay: 150,
   numMaxConcurrent: 3,
   selConflictAction: 'uniquify',
+  selSkipDownloaded: 'off',
   txtNotificationFormat: '$PlatformName$ $UserName$ - $Title$'
 }
 
@@ -94,6 +95,10 @@ const tooltipRegistry = {
     info: "help_conflict_action",
     containerClass: "field-header-txt"
   },
+  "lblSkipDownloaded": {
+    info: "help_skip_downloaded",
+    containerClass: "field-header-txt"
+  },
   "lblNotificationFormat": {
     info: "help_notification_format",
     warning: "warning_save_problems",
@@ -134,6 +139,7 @@ function save_settings() {
   var numMaxConcurrent = parseInt(document.getElementById("numMaxConcurrent").value);
   if (isNaN(numMaxConcurrent) || numMaxConcurrent < 0) numMaxConcurrent = PATH_CONFIG.numMaxConcurrent;
   var selConflictAction = document.getElementById("selConflictAction").value;
+  var selSkipDownloaded = document.getElementById("selSkipDownloaded").value;
   var txtNotificationFormat = document.getElementById("txtNotificationFormat").value;
 
   chrome.storage.local.set(
@@ -150,6 +156,7 @@ function save_settings() {
       numDownloadDelay: numDownloadDelay,
       numMaxConcurrent: numMaxConcurrent,
       selConflictAction: selConflictAction,
+      selSkipDownloaded: selSkipDownloaded,
       txtNotificationFormat: txtNotificationFormat,
     },
     function () {
@@ -160,7 +167,7 @@ function save_settings() {
 
 function load_settings() {
   chrome.storage.local.get(
-    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "txtNotificationFormat"],
+    ["cbDlText", "cbDlImages", "cbDlAttachments", "txtBasePath", "txtTextPath", "txtImagesPath", "txtAttachmentsPath", "cbRemoveDupByUrl", "numRetryCount", "numDownloadDelay", "numMaxConcurrent", "selConflictAction", "selSkipDownloaded", "txtNotificationFormat"],
     function (load) {
       document.getElementById("cbDlText").checked = load.cbDlText;
       document.getElementById("cbDlImages").checked = load.cbDlImages;
@@ -174,6 +181,7 @@ function load_settings() {
       document.getElementById("numDownloadDelay").value = load.numDownloadDelay ?? PATH_CONFIG.numDownloadDelay;
       document.getElementById("numMaxConcurrent").value = load.numMaxConcurrent ?? PATH_CONFIG.numMaxConcurrent;
       document.getElementById("selConflictAction").value = load.selConflictAction ?? PATH_CONFIG.selConflictAction;
+      document.getElementById("selSkipDownloaded").value = load.selSkipDownloaded ?? PATH_CONFIG.selSkipDownloaded;
       document.getElementById("txtNotificationFormat").value = load.txtNotificationFormat ?? PATH_CONFIG.txtNotificationFormat;
       if (load.txtBasePath == undefined) {
         initialize_settings();
@@ -205,6 +213,7 @@ function initialize_settings() {
   document.getElementById("numDownloadDelay").value = PATH_CONFIG.numDownloadDelay;
   document.getElementById("numMaxConcurrent").value = PATH_CONFIG.numMaxConcurrent;
   document.getElementById("selConflictAction").value = PATH_CONFIG.selConflictAction;
+  document.getElementById("selSkipDownloaded").value = PATH_CONFIG.selSkipDownloaded;
   document.getElementById("txtNotificationFormat").value = PATH_CONFIG.txtNotificationFormat;
   save_settings();
   // Hide warning icons when the reset to defaults button is pressed.
@@ -536,6 +545,15 @@ function toggleWarning(inputId, show) {
 }
 
 document.getElementById("reset").addEventListener("click", initialize_settings);
+
+// 이미 받은 파일 기록 지우기 (빈 배열을 저장하면 백그라운드가 기록을 비움)
+document.getElementById("clearDownloadHistory").addEventListener("click", () => {
+  const i18n = (typeof browser !== 'undefined') ? browser.i18n : chrome.i18n;
+  if (!confirm(i18n.getMessage("confirm_clear_download_history"))) return;
+  chrome.storage.local.set({ downloadedFiles: [] }, () => {
+    alert(i18n.getMessage("notify_download_history_cleared"));
+  });
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   localizeHtmlPage(); // UI 텍스트를 먼저 지역화합니다.

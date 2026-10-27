@@ -334,5 +334,29 @@
   },
   "notify_creator_fetch_failed": {
     "message": "投稿$1件を読み込めませんでした"
+  },
+  "options_skip_downloaded": {
+    "message": "ダウンロード済みのファイルをスキップ"
+  },
+  "options_skip_off": {
+    "message": "オフ（すべてのファイルを再ダウンロード）"
+  },
+  "options_skip_record": {
+    "message": "拡張機能の記録を使用"
+  },
+  "options_skip_history": {
+    "message": "ブラウザのダウンロード履歴を使用"
+  },
+  "help_skip_downloaded": {
+    "message": "再ダウンロード時に、すでにダウンロードしたファイルをスキップします。<ul><li><b>拡張機能の記録</b>：拡張機能が保存に成功したファイルを記憶します（失敗したファイルは記録から削除されます）。ブラウザのダウンロード一覧を消しても残りますが、自分で削除したファイルもスキップされるため、必要なら下のボタンで記録を消去してください。</li><li><b>ブラウザのダウンロード履歴</b>：ブラウザのダウンロード一覧から、同じファイル名で完了し、ファイルがディスクに残っている項目を探します。削除したファイルは再ダウンロードされますが、ダウンロード一覧を消すとすべて再ダウンロードされます。</li></ul>"
+  },
+  "options_clear_download_history": {
+    "message": "ダウンロード済み記録を消去"
+  },
+  "confirm_clear_download_history": {
+    "message": "ダウンロード済みファイルの記録を消去しますか？次回からすべてのファイルを再度ダウンロードします。"
+  },
+  "notify_download_history_cleared": {
+    "message": "ダウンロード済みファイルの記録を消去しました。"
   }
 }

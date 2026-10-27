@@ -63,6 +63,14 @@
           <option value="overwrite" data-l10n-id="options_conflict_overwrite">Overwrite the existing file</option>
         </select>
       </div>
+      <div class="input-group">
+        <label id="lblSkipDownloaded" for="selSkipDownloaded" data-l10n-id="options_skip_downloaded">Skip files that were already downloaded</label>
+        <select id="selSkipDownloaded">
+          <option value="off" data-l10n-id="options_skip_off">Off (download every file again)</option>
+          <option value="record" data-l10n-id="options_skip_record">Use the extension's own record</option>
+          <option value="history" data-l10n-id="options_skip_history">Use the browser download history</option>
+        </select>
+      </div>
     </section>
 
     <!-- 2. 파일명 설정 (Rename Macros) -->
@@ -98,6 +106,7 @@
     <!-- 3. 액션 버튼 -->
     <section class="actions">
       <button id="reset" class="btn danger" data-l10n-id="options_reset_button">Reset to default settings</button>
+      <button id="clearDownloadHistory" class="btn danger" data-l10n-id="options_clear_download_history">Clear downloaded file history</button>
     </section>
 
     <!-- 4. 매크로 설명 테이블 -->
