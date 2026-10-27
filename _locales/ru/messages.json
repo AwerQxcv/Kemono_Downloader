@@ -245,6 +245,12 @@
   "update_notes_v132_hint_desc": {
     "message": "При ошибке загрузки уведомление теперь поясняет, что проблема может быть на стороне сервера kemono / pawchive, а не в расширении, и что можно попробовать."
   },
+  "update_notes_v132_progress_title": {
+    "message": "Прогресс загрузки одного поста"
+  },
+  "update_notes_v132_progress_desc": {
+    "message": "При загрузке одного поста уведомление показывает, сколько файлов готово и сколько повторяется, и загрузку можно отменить прямо из него."
+  },
   "update_notes_v131_skip_title": {
     "message": "Пропуск уже загруженных файлов"
   },
@@ -409,6 +415,18 @@
   },
   "notify_creator_progress": {
     "message": "Скачивание поста $1/$2"
+  },
+  "notify_post_progress": {
+    "message": "Загрузка… готово $1 из $2"
+  },
+  "notify_post_retrying": {
+    "message": "Повторяется: $1"
+  },
+  "notify_batch_cancelled_title": {
+    "message": "Загрузка отменена"
+  },
+  "notify_batch_stats_cancelled": {
+    "message": "Скачано $1 из $2, отменено $3"
   },
   "notify_creator_waiting": {
     "message": "Ожидание завершения загрузок…"

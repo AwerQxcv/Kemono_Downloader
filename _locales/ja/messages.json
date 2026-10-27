@@ -245,6 +245,12 @@
   "update_notes_v132_hint_desc": {
     "message": "ダウンロードに失敗したとき、拡張機能ではなく kemono / pawchive のサーバー側の問題かもしれないという案内と対処方法を表示します。"
   },
+  "update_notes_v132_progress_title": {
+    "message": "投稿ダウンロードの進行状況を表示"
+  },
+  "update_notes_v132_progress_desc": {
+    "message": "投稿を 1 件ダウンロードするときも、完了した数と再試行中のファイル数を通知に表示し、通知から直接キャンセルできます。"
+  },
   "update_notes_v131_skip_title": {
     "message": "ダウンロード済みのファイルをスキップ"
   },
@@ -409,6 +415,18 @@
   },
   "notify_creator_progress": {
     "message": "投稿をダウンロード中 $1/$2"
+  },
+  "notify_post_progress": {
+    "message": "ダウンロード中… $1/$2 件完了"
+  },
+  "notify_post_retrying": {
+    "message": "再試行中 $1 件"
+  },
+  "notify_batch_cancelled_title": {
+    "message": "ダウンロードをキャンセルしました"
+  },
+  "notify_batch_stats_cancelled": {
+    "message": "$1/$2 件ダウンロード、$3 件キャンセル"
   },
   "notify_creator_waiting": {
     "message": "ダウンロードの完了を待っています…"
