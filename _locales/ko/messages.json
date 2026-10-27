@@ -109,6 +109,9 @@
   "macro_desc_att_name": {
     "message": "원본 첨부파일 이름"
   },
+  "macro_desc_thumbnail": {
+    "message": "원본 대신 미리보기(썸네일)로 받는 파일이면 _Thumbnail, 아니면 빈 칸. 예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail"
+  },
   "macro_desc_year": {
     "message": "연"
   },
@@ -198,10 +201,10 @@
     "message": "개선된 기능"
   },
   "update_notes_v133_preview_title": {
-    "message": "원본이 없는 파일은 미리보기 이미지로 다운로드"
+    "message": "원본을 받을 수 없는 파일은 미리보기 이미지로 다운로드"
   },
   "update_notes_v133_preview_desc": {
-    "message": "사이트에 원본이 없고 미리보기만 남은 파일(preview_only)은 받을 수 없는 원본 주소 대신 미리보기(썸네일) 이미지로 받습니다. 이런 파일이 있으면 알림으로 알려주며, 작가 일괄 다운로드에서는 한 번만 알리고 계속 진행합니다."
+    "message": "사이트에 원본이 없고 미리보기만 남은 파일(preview_only)과 kemono에서 가져온 파일(origin이 kemono, kemono 파일 서버가 닫혀 있어 거의 항상 실패함)은 받을 수 없는 원본 주소 대신 미리보기(썸네일) 이미지로 받습니다. 이런 파일이 있으면 알림으로 알려주며, 작가 일괄 다운로드에서는 한 번만 알리고 계속 진행합니다. 이미지·첨부파일 이름 설정에 $Thumbnail$ 매크로를 넣으면 이런 파일 이름에 _Thumbnail이 붙습니다(예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)."
   },
   "update_notes_v133_stuck_title": {
     "message": "재시도할 파일이 오래 진행되지 않던 문제 수정"
@@ -456,16 +459,22 @@
     "message": "$1/$2개 받음, $3개 취소"
   },
   "notify_preview_only_title": {
-    "message": "원본이 없는 파일이 있습니다"
+    "message": "원본 대신 미리보기로 받는 파일이 있습니다"
   },
   "notify_preview_only_body": {
-    "message": "사이트에 원본이 없는 파일은 미리보기(썸네일) 이미지로 받습니다. 원본보다 화질이 낮을 수 있습니다."
+    "message": "사이트에 원본이 없는 파일은 미리보기(썸네일) 이미지로 받습니다."
+  },
+  "notify_preview_quality": {
+    "message": "원본보다 화질이 낮을 수 있습니다."
+  },
+  "notify_preview_kemono_body": {
+    "message": "kemono에서 가져온 파일(origin: kemono)은 kemono 파일 서버가 닫혀 있어 원본으로 받지 않고 미리보기(썸네일) 이미지로 받습니다."
   },
   "notify_preview_only_count": {
     "message": "미리보기로 받는 파일 $1개"
   },
   "notify_preview_only_once": {
-    "message": "이 안내는 이번 일괄 다운로드에서 한 번만 표시됩니다."
+    "message": "이유마다 이번 일괄 다운로드에서 한 번만 표시됩니다."
   },
   "notify_status_paused": {
     "message": "⏸ 서버 과부하로 보여 잠시 쉬는 중\n($1초 뒤 다시 시작)"

@@ -219,19 +219,32 @@ function classifyFiles(post) {
   const attachments = [];
   for (const file of files) {
     const name = decodeHtmlEntities(file.name || '');
-    // preview_only: 사이트에 원본이 없고 미리보기(썸네일)만 있는 파일. /data 주소로는 받을 수 없으므로
-    // 임시 주소(temp_url)가 없으면 썸네일 주소로 받음
+    // 원본을 받을 수 없는 파일은 임시 주소(temp_url)가 없으면 썸네일 주소로 받음
+    //   preview_only: 사이트에 원본이 없고 미리보기(썸네일)만 있는 파일
+    //   origin이 kemono인 이미지: kemono에서 가져온 파일. 원본이 kemono 파일 서버에 있어 그쪽이 닫히면 거의 항상 실패함
+    //   (이미지가 아니면 썸네일도 없으므로 원본 주소로 시도)
+    const isImage = IMAGE_EXTENSIONS.has(getExtension(name || file.path));
     const tempUrl = getTempUrl(file);
-    const previewOnly = file.preview_only === true && !tempUrl; // 썸네일로 받는 파일
+    // 썸네일로 받는 이유. 'missing'(원본 없음) / 'kemono'(kemono에서 가져옴) / false(원본으로 받음)
+    const previewOnly = tempUrl ? false
+      : file.preview_only === true ? 'missing'
+      : isImage && isKemonoOrigin(post, file) ? 'kemono'
+      : false;
     const entry = {
       url: getFileServer(file) + '/data' + file.path,
       downloadUrl: tempUrl || (previewOnly ? getThumbnailUrl(file) : null), // 있으면 url 대신 이 주소로 다운로드
       name: name,
       previewOnly: previewOnly,
     };
-    (IMAGE_EXTENSIONS.has(getExtension(name || file.path)) ? images : attachments).push(entry);
+    (isImage ? images : attachments).push(entry);
   }
   return { images, attachments };
+}
+
+// kemono에서 가져온 파일인지 (파일에 origin이 없으면 게시글의 origin을 따름). kemono 사이트 자체에서는 해당 없음
+function isKemonoOrigin(post, file) {
+  if (location.hostname.startsWith('kemono.')) return false;
+  return (file.origin || post.origin) === 'kemono';
 }
 
 // 파일이 저장된 서버 주소. API 응답의 server(전체 주소)나 node(서버 번호, 2면 n2.도메인)를 사용
@@ -398,7 +411,8 @@ function collectContent(type) {
       // temp_url이 있으면 그대로, 아니면 ?f= (서버가 원본 파일명으로 내려주게 하는 파라미터)를 붙인 /data 주소
       url: file.downloadUrl || `${urlPart}?f=${encodeURIComponent(rawFileName)}`,
       name: sanitizeText(finalNameOnly, false),
-      extension: extension
+      extension: extension,
+      thumbnail: !!file.previewOnly, // 원본 대신 미리보기(썸네일)로 받는 파일 ($Thumbnail$ 매크로)
     });
 
     return acc;
@@ -485,6 +499,8 @@ function getSavePathAndName(type, item) {
     return padValue ? indexStr.padStart(Number(padValue), "0") : indexStr;
   });
 
+  // $Thumbnail$: 미리보기로 받는 파일이면 "_Thumbnail", 아니면 빈 문자열 (예: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)
+  query = query.replaceAll('$Thumbnail$', item.thumbnail ? '_Thumbnail' : '');
   return query.replaceAll(`$${prefix}Name$`, item.name) + item.extension;
 }
 
@@ -597,12 +613,12 @@ async function downloadPost(str) {
 
   const usedNames = new Set(); // 이번 배치에서 이미 쓴 파일 경로 (makeUniqueInBatch 참고)
 
-  // 원본 없이 미리보기로 받는 파일이 있으면 알림 (작가 일괄 다운로드에서는 한 번만)
-  const previewCount = [
+  // 원본 대신 미리보기로 받는 파일이 있으면 이유별로 알림 (작가 일괄 다운로드에서는 이유마다 한 번만)
+  const previewFiles = [
     ...(str.cbDlImages == true ? postData.images : []),
     ...(str.cbDlAttachments == true ? postData.attachments : []),
-  ].filter((file) => file.previewOnly).length;
-  if (previewCount > 0) warnPreviewOnly(previewCount);
+  ].filter((file) => file.previewOnly);
+  if (previewFiles.length > 0) warnPreviewOnly(previewFiles);
 
   try {
     if (str.cbDlText == true) {
@@ -622,16 +638,22 @@ async function downloadPost(str) {
   return batchId;
 }
 
-function warnPreviewOnly(count) {
-  debugLog(`게시글 ${postData.pageID}: 원본이 없는 파일 ${count}개 → 미리보기(썸네일)로 받음`);
+function warnPreviewOnly(previewFiles) {
+  const counts = { missing: 0, kemono: 0 };
+  for (const file of previewFiles) counts[file.previewOnly]++;
+  debugLog(`게시글 ${postData.pageID}: 미리보기(썸네일)로 받는 파일 ${previewFiles.length}개 (원본 없음 ${counts.missing}, kemono ${counts.kemono})`);
+  let reasons = Object.keys(counts).filter((reason) => counts[reason] > 0);
   if (creatorRun) {
-    if (creatorRun.previewWarned) return;
-    creatorRun.previewWarned = true;
+    reasons = reasons.filter((reason) => !creatorRun.previewWarned.has(reason));
+    if (reasons.length === 0) return;
+    reasons.forEach((reason) => creatorRun.previewWarned.add(reason));
   }
+  const lines = reasons.map((reason) => chrome.i18n.getMessage(reason === 'kemono' ? 'notify_preview_kemono_body' : 'notify_preview_only_body'));
+  lines.push(chrome.i18n.getMessage('notify_preview_quality'));
   showToast(
     '⚠️ ' + chrome.i18n.getMessage('notify_preview_only_title'),
-    chrome.i18n.getMessage('notify_preview_only_body'),
-    creatorRun ? chrome.i18n.getMessage('notify_preview_only_once') : chrome.i18n.getMessage('notify_preview_only_count', [count.toString()]),
+    lines.join('\n'),
+    creatorRun ? chrome.i18n.getMessage('notify_preview_only_once') : chrome.i18n.getMessage('notify_preview_only_count', [previewFiles.length.toString()]),
     'warning'
   );
 }
@@ -688,7 +710,7 @@ async function downloadCreator(str, page) {
     dispatchDone: false,
     pendingBatchIds: new Set(),
     skippedPosts: 0,
-    previewWarned: false, // 원본 없는 파일 안내를 이미 띄웠는지
+    previewWarned: new Set(), // 미리보기로 받는 파일 안내를 이미 띄운 이유 ('missing' / 'kemono')
     files: 0,
     filesFailed: 0,
     filesCancelled: 0,

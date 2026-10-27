@@ -109,6 +109,9 @@
   "macro_desc_att_name": {
     "message": "Original attachment name"
   },
+  "macro_desc_thumbnail": {
+    "message": "_Thumbnail if the file is downloaded as a preview (thumbnail) instead of the original, otherwise empty. Example: $ImageCounter#3$$Thumbnail$ → 001_Thumbnail"
+  },
   "macro_desc_year": {
     "message": "Year"
   },
@@ -198,10 +201,10 @@
     "message": "Improvement"
   },
   "update_notes_v133_preview_title": {
-    "message": "Files without an original are downloaded as previews"
+    "message": "Files whose originals can't be downloaded are saved as previews"
   },
   "update_notes_v133_preview_desc": {
-    "message": "Files that only have a preview left on the site (preview_only) are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. A notification tells you when this happens; in creator downloads it appears only once and the download continues."
+    "message": "Files that only have a preview left on the site (preview_only), and files brought over from kemono (origin is kemono; kemono's file server is down, so they almost always fail), are downloaded as preview (thumbnail) images instead of from an original address that can't be downloaded. A notification tells you when this happens; in creator downloads it appears only once and the download continues. Add the $Thumbnail$ macro to the image or attachment file name to mark these files with _Thumbnail (e.g. $ImageCounter#3$$Thumbnail$ → 001_Thumbnail)."
   },
   "update_notes_v133_stuck_title": {
     "message": "Fixed files waiting to be retried not making progress for a long time"
@@ -456,16 +459,22 @@
     "message": "$1/$2 downloaded, $3 cancelled"
   },
   "notify_preview_only_title": {
-    "message": "Some files have no original"
+    "message": "Some files are downloaded as previews instead of originals"
   },
   "notify_preview_only_body": {
-    "message": "Files whose originals are not on the site are downloaded as preview (thumbnail) images. They may be lower quality than the original."
+    "message": "Files whose originals are not on the site are downloaded as preview (thumbnail) images."
+  },
+  "notify_preview_quality": {
+    "message": "They may be lower quality than the original."
+  },
+  "notify_preview_kemono_body": {
+    "message": "Files brought over from kemono (origin: kemono) are not downloaded in original quality because kemono's file server is down. They are downloaded as preview (thumbnail) images."
   },
   "notify_preview_only_count": {
     "message": "$1 files downloaded as previews"
   },
   "notify_preview_only_once": {
-    "message": "This notice is shown only once per creator download."
+    "message": "Each reason is shown only once during this bulk download."
   },
   "notify_status_paused": {
     "message": "⏸ Server seems overloaded, pausing\n($1s left)"

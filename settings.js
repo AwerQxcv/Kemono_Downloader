@@ -31,8 +31,8 @@ const MACRO_CONFIG = {
   rules: {
     'txtBasePath': '',
     'txtTextPath': '',
-    'txtImagesPath': 'ImageCounter|ImageCounter#\\d+|ImageName',
-    'txtAttachmentsPath': 'AttCounter|AttCounter#\\d+|AttName',
+    'txtImagesPath': 'ImageCounter|ImageCounter#\\d+|ImageName|Thumbnail',
+    'txtAttachmentsPath': 'AttCounter|AttCounter#\\d+|AttName|Thumbnail',
     'txtNotificationFormat': ''
   }
 };
