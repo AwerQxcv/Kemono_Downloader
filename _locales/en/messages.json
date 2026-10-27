@@ -197,6 +197,18 @@
   "update_notes_imp": {
     "message": "Improvement"
   },
+  "update_notes_v132_exclude_title": {
+    "message": "Exclude posts by keyword in creator downloads"
+  },
+  "update_notes_v132_exclude_desc": {
+    "message": "When you start a creator download, you can enter comma-separated keywords to exclude. Posts whose title contains a keyword (e.g. WIP) are skipped, and the keywords are filled in again next time."
+  },
+  "update_notes_v132_navigation_title": {
+    "message": "Move between pages while downloading"
+  },
+  "update_notes_v132_navigation_desc": {
+    "message": "You can move to other pages on the site during a creator download, and the progress notice stays on screen. Closing or reloading the tab stops posts that have not started yet."
+  },
   "update_notes_v131_skip_title": {
     "message": "Skip files that were already downloaded"
   },
@@ -338,8 +350,20 @@
   "button_cancel": {
     "message": "Cancel"
   },
-  "confirm_creator_download": {
-    "message": "Download all $1 posts from this creator?"
+  "prompt_creator_exclude": {
+    "message": "Download $1 posts from this creator.\nPosts whose title contains any of the keywords below are skipped. Separate keywords with commas (,), or leave empty to download everything. (e.g. WIP, draft)"
+  },
+  "notify_creator_navigation": {
+    "message": "You can move to other pages on the site while downloading. Closing or reloading the tab stops posts that have not started yet."
+  },
+  "confirm_creator_download_excluded": {
+    "message": "Exclude $2 of $1 posts and download the remaining $3?"
+  },
+  "notify_creator_all_excluded": {
+    "message": "Every post matched an excluded keyword, so there is nothing to download"
+  },
+  "notify_creator_excluded": {
+    "message": "$1 posts excluded"
   },
   "notify_creator_loading": {
     "message": "Loading the creator's post list…"

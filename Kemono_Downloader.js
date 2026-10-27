@@ -104,11 +104,11 @@ async function loadUserName(service, userID) {
   return link ? link.textContent : userID;
 }
 
-// 작가의 모든 게시글 ID를 최신순으로 모음. o를 50씩 올리며 빈 목록이 올 때까지 요청
+// 작가의 모든 게시글 { id, title }을 최신순으로 모음. o를 50씩 올리며 빈 목록이 올 때까지 요청
 // 목록 경로는 사이트마다 /user/{id}/posts 또는 /user/{id} 이므로 첫 페이지에서 되는 쪽을 골라 계속 사용
-async function fetchCreatorPostIDs(service, userID) {
+async function fetchCreatorPosts(service, userID) {
   const candidates = [`/${service}/user/${userID}/posts`, `/${service}/user/${userID}`];
-  const ids = [];
+  const list = [];
   const seenIDs = new Set();
   let listPath = null;
 
@@ -120,9 +120,9 @@ async function fetchCreatorPostIDs(service, userID) {
         posts = Array.isArray(data) ? data : (data && Array.isArray(data.posts) ? data.posts : null);
       } catch (error) {
         // 마지막 페이지 다음을 요청하면 빈 목록 대신 404/400을 주는 사이트가 있음 → 목록 끝으로 처리
-        if (listPath && (error instanceof PostNotFoundError || error.status === 400)) return ids;
+        if (listPath && (error instanceof PostNotFoundError || error.status === 400)) return list;
         if (listPath) throw error; // 이미 되던 경로가 도중에 다른 이유로 실패하면 중단
-        console.warn(`fetchCreatorPostIDs: ${path} failed`, error);
+        console.warn(`fetchCreatorPosts: ${path} failed`, error);
       }
       if (posts) {
         listPath = path;
@@ -135,13 +135,24 @@ async function fetchCreatorPostIDs(service, userID) {
     for (const post of posts) {
       if (!post || !post.id || seenIDs.has(String(post.id))) continue;
       seenIDs.add(String(post.id));
-      ids.push(String(post.id));
+      list.push({ id: String(post.id), title: decodeHtmlEntities(post.title || '') });
       added++;
     }
     // 한 페이지(50개)보다 적게 왔으면 마지막 페이지. 새 게시글이 하나도 없어도(같은 페이지 반복 방지) 끝
     if (posts.length < CREATOR_PAGE_SIZE || added === 0) break;
   }
-  return ids;
+  return list;
+}
+
+// "WIP, 진행중" → ['wip', '진행중']
+function parseExcludeKeywords(text) {
+  return String(text || '').split(',').map((keyword) => keyword.trim().toLowerCase()).filter((keyword) => keyword);
+}
+
+// 제목에 키워드가 하나라도 들어 있으면 제외 (대소문자 구분 없음)
+function isExcludedTitle(title, keywords) {
+  const lower = title.toLowerCase();
+  return keywords.some((keyword) => lower.includes(keyword));
 }
 
 // file + attachments를 확장자로 이미지 / 첨부파일로 분류
@@ -534,14 +545,14 @@ async function downloadPost(str) {
 
 // === 작가 페이지 일괄 다운로드 ===
 // 진행 중인 작가 일괄 다운로드 상태. 없으면 null
-// { total, sent, fetchFailed, cancelled, dispatchDone, pendingBatchIds, files, filesFailed, progress }
+// { total, excluded, sent, fetchFailed, cancelled, dispatchDone, pendingBatchIds, files, filesFailed, progress }
 let creatorRun = null;
 
 async function downloadCreator(str, page) {
   const progress = showProgressToast(chrome.i18n.getMessage('notify_creator_loading'));
-  let ids;
+  let posts;
   try {
-    ids = await fetchCreatorPostIDs(page.service, page.userID);
+    posts = await fetchCreatorPosts(page.service, page.userID);
   } catch (error) {
     console.error('downloadCreator: failed to fetch post list', error);
     progress.remove();
@@ -550,14 +561,33 @@ async function downloadCreator(str, page) {
   }
   progress.remove();
 
-  if (ids.length === 0) {
+  if (posts.length === 0) {
     showToast('ℹ️ ' + chrome.i18n.getMessage('notify_creator_no_posts'), '', '', 'warning');
     return;
   }
-  if (!confirm(chrome.i18n.getMessage('confirm_creator_download', [ids.length.toString()]))) return;
+
+  // 제외 키워드 입력 (지난번에 쓴 키워드를 기본값으로). 취소하면 다운로드하지 않음
+  const saved = await browser.storage.local.get('txtExcludeKeywords');
+  const input = prompt(
+    chrome.i18n.getMessage('prompt_creator_exclude', [posts.length.toString()]) + '\n\n' + chrome.i18n.getMessage('notify_creator_navigation'),
+    saved.txtExcludeKeywords || ''
+  );
+  if (input === null) return;
+  chrome.storage.local.set({ txtExcludeKeywords: input.trim() });
+
+  const keywords = parseExcludeKeywords(input);
+  const ids = posts.filter((post) => !isExcludedTitle(post.title, keywords)).map((post) => post.id);
+  const excluded = posts.length - ids.length;
+  if (ids.length === 0) {
+    showToast('ℹ️ ' + chrome.i18n.getMessage('notify_creator_all_excluded'), '', '', 'warning');
+    return;
+  }
+  // 제외한 게시글이 있으면 몇 개를 받는지 한 번 더 확인
+  if (excluded > 0 && !confirm(chrome.i18n.getMessage('confirm_creator_download_excluded', [posts.length.toString(), excluded.toString(), ids.length.toString()]))) return;
 
   creatorRun = {
     total: ids.length,
+    excluded: excluded,
     sent: 0,
     fetchFailed: 0,
     cancelled: false,
@@ -598,6 +628,9 @@ function finishCreatorRunIfDone() {
   const filesOk = run.files - run.filesFailed;
   const failed = run.filesFailed > 0 || run.fetchFailed > 0;
   const lines = [chrome.i18n.getMessage('notify_creator_stats', [run.sent.toString(), filesOk.toString(), run.files.toString()])];
+  if (run.excluded > 0) {
+    lines.push(chrome.i18n.getMessage('notify_creator_excluded', [run.excluded.toString()]));
+  }
   if (run.fetchFailed > 0) {
     lines.push(chrome.i18n.getMessage('notify_creator_fetch_failed', [run.fetchFailed.toString()]));
   }
@@ -827,6 +860,8 @@ function showProgressToast(text, onCancel) {
   container.appendChild(toast);
 
   const update = (newText, cancellable = true) => {
+    // 사이트 안에서 페이지를 옮기면 화면이 다시 그려지면서 알림이 빠질 수 있으므로 다시 붙임
+    if (!toast.isConnected) createToastContainer().appendChild(toast);
     line.textContent = newText;
     if (button && !cancellable) button.remove();
   };
